@@ -133,6 +133,9 @@ func (h *Host) GetKind() string {
 func (h *Host) GetUUID() string {
 	return "Not implemented"
 }
+func (h *Host) GetName() string {
+	return h.Name
+}
 func (h *Host) Bytes() []byte {
 	b, _ := json.Marshal(h)
 	return b

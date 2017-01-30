@@ -288,7 +288,7 @@ func (kvStore *KvStore) makeKey(suffix string, args ...interface{}) string {
 }
 
 // TODO for Stas database Put must not require Datacenter.
-func (kvStore *KvStore) Put(key string, entity common.RomanaEntity, dc common.Datacenter) error {
+func (kvStore *KvStore) Put(itemKey string, entity common.RomanaEntity, dc common.Datacenter) error {
 	var err error
 	hostsKey := kvStore.makeKey("hosts_ids")
 	if entity.GetID() == 0 {
@@ -312,9 +312,9 @@ func (kvStore *KvStore) Put(key string, entity common.RomanaEntity, dc common.Da
 		entity.SetRomanaIP(newRomanaIP)
 	}
 
-	dBkey := kvStore.makeKey("%s/%d", key, entity.GetID())
+	key := kvStore.makeKey("%s/%d", itemKey, entity.GetID())
 
-	_, _, err = kvStore.Db.AtomicPut(dBkey, entity.Bytes(), nil, nil)
+	_, _, err = kvStore.Db.AtomicPut(key, entity.Bytes(), nil, nil)
 	if err != nil {
 		if err == libkvStore.ErrKeyExists {
 			return common.NewErrorConflict(fmt.Sprintf("Host %d already exists", entity.GetID()))
@@ -325,116 +325,145 @@ func (kvStore *KvStore) Put(key string, entity common.RomanaEntity, dc common.Da
 	return nil
 }
 
-// AddHost adds the host. If RomanaIp is not specified for it,
-// a new RomanaIp is generated and assigned to it.
-func (kvStore *KvStore) AddHost(dc common.Datacenter, host *common.Host) error {
-	var err error
-	hostsKey := kvStore.makeKey("hosts_ids")
-	if host.ID == 0 {
-		host.ID, err = kvStore.getID(hostsKey)
-		if err != nil {
-			log.Debugf("AddHost: Error getting new ID: %s", err)
-			return err
-		}
-		log.Debugf("AddHost: Made ID %d", host.ID)
-	}
+func (kvStore *KvStore) Delete(itemKey string) error {
+	key := kvStore.makeKey(itemKey)
 
-	romanaIP := strings.TrimSpace(host.RomanaIp)
-	if romanaIP == "" {
-		host.RomanaIp, err = getNetworkFromID(host.ID, dc.PortBits, dc.Cidr)
-		if err != nil {
-			log.Debugf("AddHost: Error in getNetworkFromID: %s", err)
-			return err
-		}
-	}
-	key := kvStore.makeKey("hosts/%d", host.ID)
-	value, err := json.Marshal(host)
+	// TODO for Stas, Get here only for reclaimID() call,
+	// remove when appropriate.
+	entity, err := kvStore.Get(itemKey)
 	if err != nil {
-		log.Debugf("AddHost: Error marshalling host: %s", err)
+		log.Debugf("Delete: Warning %s", err)
+		return nil // attempting delete non existent object must be noop
+	}
+	host, isHost := entity.(*common.Host)
+
+	err = kvStore.Db.Delete(key)
+	if err != nil {
+		log.Debugf("Delete: Error %s", err)
 		return err
 	}
-	_, _, err = kvStore.Db.AtomicPut(key, value, nil, nil)
-	if err != nil {
-		if err == libkvStore.ErrKeyExists {
-			return common.NewErrorConflict(fmt.Sprintf("Host %d already exists: %v", host.ID, *host))
-		} else {
-			return err
-		}
-	}
-	return nil
-}
 
-// DeleteHost deletes host based on supplied ID.
-func (kvStore *KvStore) DeleteHost(hostID uint64) error {
-	if hostID == 0 {
-		return fmt.Errorf("error deleting host, hostID not present.")
-	}
-
-	key := kvStore.makeKey("hosts/%d", hostID)
-	err := kvStore.Db.Delete(key)
-	if err != nil {
-		log.Debugf("DeleteHost: Error %s", err)
-		return err
+	// TODO for Stas, reclaim must be triggered outside of storage.
+	if !isHost { // code below only relevant for deleting a Host.
+		return nil
 	}
 	hostsKey := kvStore.makeKey("hosts_ids")
-	err = kvStore.reclaimID(hostsKey, hostID)
+	err = kvStore.reclaimID(hostsKey, host.GetID())
 	if err != nil {
-		log.Debugf("DeleteHost: Error %s", err)
+		log.Debugf("Delete: Error %s", err)
 		return err
 	}
 	return nil
 }
 
-// ListHosts lists available hosts.
-func (kvStore *KvStore) ListHosts() ([]common.Host, error) {
-	log.Trace(trace.Public, "KvStore.ListHosts()")
-	var err error
-	key := kvStore.makeKey("hosts/")
-	log.Debugf("ListHosts(): Listing %s", key)
+// TODO for Stas, list is one method that should probably assert
+// desired type. With Get and Delete caller can and should handle
+// any result that satisfies behaviour but for List we might want
+// to have a collection of similar types.
+//
+// 	func List(kind string, dirKey string) ([]common.RomanaEntity, error) ?
+//
+func (kvStore *KvStore) List(dirKey string) ([]common.RomanaEntity, error) {
+	log.Tracef(trace.Public, "KvStore.List(%s)", dirKey)
+	key := kvStore.makeKey(dirKey)
 	exists, err := kvStore.Db.Exists(key)
 	if err != nil {
-		log.Debugf("ListHosts: Error %s", err)
+		log.Debugf("List: Error %s", err)
 		return nil, err
 	}
 	if !exists {
-		return make([]common.Host, 0), nil
+		return nil, nil
 	}
-	list, err := kvStore.Db.List(key)
 
+	list, err := kvStore.Db.List(key)
 	if err != nil {
-		log.Debugf("ListHosts: Error %s", err)
+		log.Debugf("List: Error %s", err)
 		return nil, err
 	}
-	hosts := make([]common.Host, len(list))
-	for i, kv := range list {
-		err = json.Unmarshal(kv.Value, &hosts[i])
+
+	var result []common.RomanaEntity
+	for _, kv := range list {
+		kind, err := detectObjectKind(kv.Value)
 		if err != nil {
-			log.Debugf("ListHosts: Error %s", err)
+			log.Debugf("List: Error %s", err)
 			return nil, err
 		}
+
+		entity, err := unmarshalRomanaEntity(kind, kv.Value)
+		if err != nil {
+			log.Debugf("List: Error %s", err)
+			return nil, err
+		}
+
+		result = append(result, entity)
 	}
-	return hosts, nil
+
+	return result, nil
 }
 
-// GetHost gets the host information based on provided ID.
-func (kvStore KvStore) GetHost(hostID uint64) (common.Host, error) {
-	host := common.Host{}
-	key := kvStore.makeKey("hosts/%d", hostID)
+func (kvStore KvStore) Get(itemKey string) (common.RomanaEntity, error) {
+	log.Tracef(trace.Public, "KvStore.Get(%s)", itemKey)
+	key := kvStore.makeKey(itemKey)
+
 	exists, err := kvStore.Db.Exists(key)
 	if err != nil {
 		log.Debugf("GetHost: Error %s", err)
-		return host, err
+		return nil, err
 	}
+
 	if !exists {
-		return host, common.NewError404("host", fmt.Sprintf("%d", hostID))
+		return nil, common.NewError404("romanaEntity", key)
 	}
+
 	kvPair, err := kvStore.Db.Get(key)
 	if err != nil {
 		log.Debugf("GetHost: Error %s", err)
-		return host, err
+		return nil, err
 	}
-	err = json.Unmarshal(kvPair.Value, &host)
-	return host, err
+
+	kind, err := detectObjectKind(kvPair.Value)
+	if err != nil {
+		log.Debugf("GetHost: Error %s", err)
+		return nil, err
+	}
+
+	entity, err := unmarshalRomanaEntity(kind, kvPair.Value)
+	if err != nil {
+		log.Debugf("GetHost: Error %s", err)
+		return nil, err
+	}
+
+	return entity, nil
+}
+
+// detectObjectKind expects marshaled json on input, it partially unmarshals it
+// and retrieves the Kind field.
+func detectObjectKind(data []byte) (string, error) {
+	kindStruct := struct{
+		Kind	string
+	}{}
+
+	if err := json.Unmarshal(data, &kindStruct); err != nil {
+		return "", common.NewError("Failed to unmarshal Kind field: %s", err)
+	}
+	return kindStruct.Kind, nil
+}
+
+// unmarshalRomanaEntity expect json marshaled data of appropriate kind, unmarshals
+// the data and returns it as RomanaEntity interface.
+func unmarshalRomanaEntity(kind string, data []byte) (common.RomanaEntity, error) {
+	switch kind {
+	case "Host":
+		romanaType := common.Host{}
+		if err := json.Unmarshal(data, &romanaType); err != nil {
+			return nil, common.NewError("Failed to unmarshal object with Kind field: %s, %s", kind, err)
+		}
+		return &romanaType, nil
+	default:
+		return nil, common.NewError("Not a romana type with Kind=%s", kind)
+	}
+
+	return nil, nil
 }
 
 func init() {

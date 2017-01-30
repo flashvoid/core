@@ -26,6 +26,7 @@ import (
 type RomanaEntity interface {
 	GetKind() string
 	GetUUID() string
+	GetName() string
 	Bytes() ([]byte)
 
 	// TODO for Stas temporary due to ip can't be assigned outside of storage,

@@ -126,12 +126,11 @@ type Store interface {
 	Find(query url.Values, entities interface{}, flag FindFlag) (interface{}, error)
 
 	// TODO for Stas must not require Datacenter.
-	Put(key string, entity RomanaEntity, dc Datacenter) error
+	Put(itemKey string, entity RomanaEntity, dc Datacenter) error
 
-	AddHost(dc Datacenter, host *Host) error
-	DeleteHost(hostID uint64) error
-	GetHost(hostID uint64) (Host, error)
-	ListHosts() ([]Host, error)
+	Get(itemKey string) (RomanaEntity, error)
+	Delete(itemKey string) error
+	List(dirKey string) ([]RomanaEntity, error)
 }
 
 // ServiceStore interface is what each service's store needs to implement.

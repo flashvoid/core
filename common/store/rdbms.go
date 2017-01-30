@@ -415,3 +415,15 @@ func (rdbms *RdbmsStore) GetHost(hostID uint64) (common.Host, error) {
 func (rdbms *RdbmsStore) Put(key string, entity common.RomanaEntity, dc common.Datacenter) error {
 	return nil
 }
+
+func (rdbms *RdbmsStore) Get(key string) (common.RomanaEntity, error) {
+	return nil, nil
+}
+
+func (rdbms *RdbmsStore) Delete(key string) error {
+	return nil
+}
+
+func (rdbms *RdbmsStore) List(dirKey string) ([]common.RomanaEntity, error) {
+	return nil, nil
+}

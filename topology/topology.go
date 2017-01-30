@@ -132,10 +132,16 @@ func (topology *TopologySvc) handleGetHost(input interface{}, ctx common.RestCon
 	if err != nil {
 		return nil, err
 	}
-	host, err := topology.store.GetHost(id)
+	itemKey := fmt.Sprintf("%s/%d", hostDbKey, id)
+	entity, err := topology.store.Get(itemKey)
 	if err != nil {
 		return nil, err
 	}
+	if entity.GetKind() != "Host" {
+		return nil, common.NewError("Unexpected object at %s of kind %s, expecting kind=Host", itemKey, entity.GetKind())
+	}
+	host := entity.(*common.Host)
+
 	agentURL := fmt.Sprintf("http://%s:%d", host.Ip, host.AgentPort)
 	agentLink := common.LinkResponse{Href: agentURL, Rel: "agent"}
 	hostLink := common.LinkResponse{Href: hostListPath + "/" + idStr, Rel: "self"}
@@ -146,10 +152,11 @@ func (topology *TopologySvc) handleGetHost(input interface{}, ctx common.RestCon
 
 func (topology *TopologySvc) handleHostListGet(input interface{}, ctx common.RestContext) (interface{}, error) {
 	log.Println("In handleHostListGet()")
-	hosts, err := topology.store.ListHosts()
+	hosts, err := topology.store.List(hostDbKey)
 	if err != nil {
 		return nil, err
 	}
+//	hosts := list.([]common.Host)
 	return hosts, nil
 }
 
@@ -158,14 +165,15 @@ func (topology *TopologySvc) handleHostListGet(input interface{}, ctx common.Res
 // the default Agent port.
 func (topology *TopologySvc) handleHostListPost(input interface{}, ctx common.RestContext) (interface{}, error) {
 	host := input.(*common.Host)
+	host.Kind = "Host"
 
 	// Check name collision.
-	hosts, err := topology.store.ListHosts()
+	hosts, err := topology.store.List(hostDbKey)
 	if err != nil {
 		return nil, err
 	}
 	for _, h := range hosts {
-		if h.Name == host.Name {
+		if h.GetName() == host.Name {
 			return nil, common.NewErrorConflict(fmt.Sprintf("Host with name %s already registered in romana", host.Name))
 		}
 	}
@@ -288,7 +296,8 @@ func (topology *TopologySvc) handleDeleteHost(input interface{}, ctx common.Rest
 	if err != nil {
 		return nil, err
 	}
-	err = topology.store.DeleteHost(id)
+	itemKey := fmt.Sprintf("%s/%d", hostDbKey, id)
+	err = topology.store.Delete(itemKey)
 	if err != nil {
 		return nil, err
 	}
