@@ -287,6 +287,44 @@ func (kvStore *KvStore) makeKey(suffix string, args ...interface{}) string {
 	return key
 }
 
+// TODO for Stas database Put must not require Datacenter.
+func (kvStore *KvStore) Put(key string, entity common.RomanaEntity, dc common.Datacenter) error {
+	var err error
+	hostsKey := kvStore.makeKey("hosts_ids")
+	if entity.GetID() == 0 {
+		newID, err := kvStore.getID(hostsKey)
+		if err != nil {
+			log.Debugf("AddHost: Error getting new ID: %s", err)
+			return err
+		}
+		entity.SetID(newID)
+		log.Debugf("AddHost: Made ID %d", entity.GetID())
+	}
+
+	romanaIP := strings.TrimSpace(entity.GetRomanaIP())
+	if romanaIP == "" {
+		newRomanaIP, err := getNetworkFromID(entity.GetID(), dc.PortBits, dc.Cidr)
+		if err != nil {
+			log.Debugf("AddHost: Error in getNetworkFromID: %s", err)
+			return err
+		}
+
+		entity.SetRomanaIP(newRomanaIP)
+	}
+
+	dBkey := kvStore.makeKey("%s/%d", key, entity.GetID())
+
+	_, _, err = kvStore.Db.AtomicPut(dBkey, entity.Bytes(), nil, nil)
+	if err != nil {
+		if err == libkvStore.ErrKeyExists {
+			return common.NewErrorConflict(fmt.Sprintf("Host %d already exists", entity.GetID()))
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
 // AddHost adds the host. If RomanaIp is not specified for it,
 // a new RomanaIp is generated and assigned to it.
 func (kvStore *KvStore) AddHost(dc common.Datacenter, host *common.Host) error {

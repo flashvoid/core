@@ -116,12 +116,40 @@ type ServiceMessage string
 // about the host.
 type Host struct {
 	ID        uint64 `sql:"AUTO_INCREMENT" json:"id,omitempty"`
+	Kind	string `json:"kind"`
 	Name      string `json:"name,omitempty"`
 	Ip        string `json:"ip,omitempty" sql:"unique"`
 	RomanaIp  string `json:"romana_ip,omitempty" sql:"unique"`
 	AgentPort uint64 `json:"agent_port,omitempty"`
 	Links     Links  `json:"links,omitempty" sql:"-"`
 }
+
+func (h *Host) GetKind() string {
+	if h.Kind == "" {
+		h.Kind = "Host"
+	}
+	return h.Kind
+}
+func (h *Host) GetUUID() string {
+	return "Not implemented"
+}
+func (h *Host) Bytes() []byte {
+	b, _ := json.Marshal(h)
+	return b
+}
+func (h *Host) SetRomanaIP(ip string) {
+	h.RomanaIp = ip
+}
+func (h *Host) GetRomanaIP() string {
+	return h.RomanaIp
+}
+func (h *Host) GetID() uint64 {
+	return h.ID
+}
+func (h *Host) SetID(id uint64) {
+	h.ID = id
+}
+
 
 // Message to register with the root service the actual
 // port a service is listening on.

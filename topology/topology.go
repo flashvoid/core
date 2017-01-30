@@ -41,6 +41,8 @@ const (
 	torListPath   = "/tors"
 	spineListPath = "/spines"
 	dcPath        = "/datacenter"
+
+	hostDbKey     = "hosts"
 )
 
 // Routes returns various routes used in the service.
@@ -183,7 +185,8 @@ func (topology *TopologySvc) handleHostListPost(input interface{}, ctx common.Re
 		}
 	}
 	log.Printf("Host will be added with agent port %d", host.AgentPort)
-	err = topology.store.AddHost(*topology.datacenter, host)
+//	err = topology.store.AddHost(*topology.datacenter, host)
+	err = topology.store.Put(hostDbKey, host, *topology.datacenter)
 	if err != nil {
 		return nil, err
 	}

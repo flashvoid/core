@@ -125,6 +125,9 @@ type Store interface {
 	// of entities to find (for example, it has to be &[]Tenant{}, not Tenant{}).
 	Find(query url.Values, entities interface{}, flag FindFlag) (interface{}, error)
 
+	// TODO for Stas must not require Datacenter.
+	Put(key string, entity RomanaEntity, dc Datacenter) error
+
 	AddHost(dc Datacenter, host *Host) error
 	DeleteHost(hostID uint64) error
 	GetHost(hostID uint64) (Host, error)

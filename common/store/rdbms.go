@@ -410,3 +410,8 @@ func (rdbms *RdbmsStore) GetHost(hostID uint64) (common.Host, error) {
 	}
 	return host, nil
 }
+
+// Noop
+func (rdbms *RdbmsStore) Put(key string, entity common.RomanaEntity, dc common.Datacenter) error {
+	return nil
+}
