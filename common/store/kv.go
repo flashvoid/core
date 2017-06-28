@@ -290,29 +290,35 @@ func (kvStore *KvStore) makeKey(suffix string, args ...interface{}) string {
 // TODO for Stas database Put must not require Datacenter.
 func (kvStore *KvStore) Put(itemKey string, entity common.RomanaEntity, dc common.Datacenter) error {
 	var err error
-	hostsKey := kvStore.makeKey("hosts_ids")
-	if entity.GetID() == 0 {
-		newID, err := kvStore.getID(hostsKey)
-		if err != nil {
-			log.Debugf("AddHost: Error getting new ID: %s", err)
-			return err
-		}
-		entity.SetID(newID)
-		log.Debugf("AddHost: Made ID %d", entity.GetID())
-	}
+	var key string
 
-	romanaIP := strings.TrimSpace(entity.GetRomanaIP())
-	if romanaIP == "" {
-		newRomanaIP, err := getNetworkFromID(entity.GetID(), dc.PortBits, dc.Cidr)
-		if err != nil {
-			log.Debugf("AddHost: Error in getNetworkFromID: %s", err)
-			return err
+	if entity.GetKind() == "Host" {
+		hostsKey := kvStore.makeKey("hosts_ids")
+		if entity.GetID() == 0 {
+			newID, err := kvStore.getID(hostsKey)
+			if err != nil {
+				log.Debugf("AddHost: Error getting new ID: %s", err)
+				return err
+			}
+			entity.SetID(newID)
+			log.Debugf("AddHost: Made ID %d", entity.GetID())
 		}
 
-		entity.SetRomanaIP(newRomanaIP)
+		romanaIP := strings.TrimSpace(entity.GetRomanaIP())
+		if romanaIP == "" {
+			newRomanaIP, err := getNetworkFromID(entity.GetID(), dc.PortBits, dc.Cidr)
+			if err != nil {
+				log.Debugf("AddHost: Error in getNetworkFromID: %s", err)
+				return err
+			}
+
+			entity.SetRomanaIP(newRomanaIP)
+		}
+
+		key = kvStore.makeKey("%s/%d", itemKey, entity.GetID())
 	}
 
-	key := kvStore.makeKey("%s/%d", itemKey, entity.GetID())
+	key = kvStore.makeKey(itemKey)
 
 	_, _, err = kvStore.Db.AtomicPut(key, entity.Bytes(), nil, nil)
 	if err != nil {
@@ -470,3 +476,15 @@ func init() {
 	// Register etcd store to libkv
 	etcd.Register()
 }
+
+// NewLock is a wrapper on top of libkv.NewLock() to avoid exposing libkv
+// directly to the store consumers.
+func (kvStore *KvStore) NewLock(key string) (common.Locker, error) {
+	lock, err := kvStore.Db.NewLock(key, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return lock, nil
+}
+

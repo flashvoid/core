@@ -427,3 +427,7 @@ func (rdbms *RdbmsStore) Delete(key string) error {
 func (rdbms *RdbmsStore) List(dirKey string) ([]common.RomanaEntity, error) {
 	return nil, nil
 }
+
+func (rdbms *RdbmsStore) NewLock(key string) (common.Locker, error) {
+	return nil, nil
+}

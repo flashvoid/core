@@ -52,6 +52,7 @@ func (irr Range) String() string {
 // the range shrinks. IDs can be returned to the ring. An instance of this SHOULD NOT
 // be created directly, use NewIDRing() to create it.
 type IDRing struct {
+	Kind string
 	// Ranges is an ordered set of ranges from which we allocate IDs.
 	// Initially this should include a single Range,
 	// from 1 to MaxUint64.
@@ -74,6 +75,7 @@ type IDRing struct {
 func NewIDRing() IDRing {
 	idRing := IDRing{Ranges: []Range{Range{Min: 1, Max: math.MaxUint64}},
 		mutex: &sync.Mutex{},
+		Kind: "IDRing",
 	}
 	return idRing
 }

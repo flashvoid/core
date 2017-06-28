@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	// libkvStore "github.com/docker/libkv/store"
 )
 
 // StoreConfig stores information needed for a connection to backing store.
@@ -128,9 +129,18 @@ type Store interface {
 	// TODO for Stas must not require Datacenter.
 	Put(itemKey string, entity RomanaEntity, dc Datacenter) error
 
+	NewLock(key string) (Locker, error)
+
 	Get(itemKey string) (RomanaEntity, error)
 	Delete(itemKey string) error
 	List(dirKey string) ([]RomanaEntity, error)
+}
+
+// Locker is a copy paste from libkv.Locker to avoid exposing libkv to the
+// store consumers directly.
+type Locker interface {
+	Lock(stopChan chan struct{}) (<-chan struct{}, error)
+	Unlock() error
 }
 
 // ServiceStore interface is what each service's store needs to implement.

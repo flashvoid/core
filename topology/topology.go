@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/romana/core/common"
 	"github.com/romana/core/common/store"
+	"github.com/romana/core/pkg/bitfields"
 	"log"
 	"net"
 	"strconv"
@@ -99,6 +100,14 @@ func (topology *TopologySvc) Routes() common.Routes {
 			MakeMessage:     nil,
 			UseRequestToken: false,
 		},
+		// DEBUG, Stas
+		common.Route{
+			Method:          "GET",
+			Pattern:         "/test",
+			Handler:         topology.debug,
+			MakeMessage:     nil,
+			UseRequestToken: false,
+		},
 	}
 
 	// TODO reintroduce (if we need to) the find routes
@@ -106,6 +115,13 @@ func (topology *TopologySvc) Routes() common.Routes {
 	//	routes = append(routes, common.CreateFindRoutes(&h, &topology.store.DbStore)...)
 	return routes
 }
+
+// 
+func (topology *TopologySvc) debug(input interface{}, ctx common.RestContext) (interface{}, error) {
+	bf, err := bitfields.InitFromDatacenter(topology.store, *topology.datacenter)
+	return bf, err
+}
+
 
 func (topology *TopologySvc) handleFindHost(input interface{}, ctx common.RestContext) (interface{}, error) {
 	query := ctx.QueryVariables
