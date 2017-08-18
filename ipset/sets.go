@@ -1,15 +1,36 @@
 package ipset
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
 
+	"github.com/pkg/errors"
+)
+
+// Set represents ipset set.
 type Set struct {
 	Name     string   `xml:" name,attr"  json:",omitempty"`
 	Header   *Header  `xml:" header,omitempty" json:"header,omitempty"`
 	Members  []Member `xml:" members>member,omitempty" json:"members,omitempty"`
 	Revision int      `xml:" revision,omitempty" json:"revision,omitempty"`
-	Type     string   `xml:" type,omitempty" json:"type,omitempty"`
+	Type     SetType  `xml:" type,omitempty" json:"type,omitempty"`
 }
 
+func NewSet(name string, sType SetType, options ...SetOpt) (*Set, error) {
+	s := Set{Name: name, Type: sType}
+
+	for _, opt := range options {
+		err := opt(&s)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &s, nil
+}
+
+// Render return string reprsentation of the set compatible with `ipset restore`
+// or with interactive session.
 func (s *Set) Render(rType RenderType) string {
 	var result string
 
@@ -44,17 +65,27 @@ func (s *Set) Render(rType RenderType) string {
 	return result
 }
 
+func (s *Set) AddMember(m *Member) error {
+	err := validateMemberForSet(s, m)
+	if err != nil {
+		return err
+	}
+	s.Members = append(s.Members, *m)
+
+	return nil
+}
+
 type SetType string
 
 const (
 	SetBitmapIp       = "bitmap:ip"
 	SetBitmapIpMac    = "bitmap:ip,mac"
-	SetBitmapIpPort   = "bitmap:port"
+	SetBitmapPort     = "bitmap:port"
 	SetHashIp         = "hash:ip"
 	SetHashMac        = "hash:mac"
 	SetHashNet        = "hash:net"
 	SetHashNetNet     = "hash:net,net"
-	SetHadhIpPort     = "hash:ip,port"
+	SetHashIpPort     = "hash:ip,port"
 	SetHashNetPort    = "hash:net,port"
 	SetHashIpPortIp   = "hash:ip,port,ip"
 	SetHashIpPortNet  = "hash:ip,port,net"
@@ -63,3 +94,316 @@ const (
 	SetHashNetIface   = "hash:net,iface"
 	SetListSet        = "list:set"
 )
+
+type SetOpt func(*Set) error
+
+func OptSetRevision(revision int) SetOpt {
+	return func(s *Set) error {
+		s.Revision = revision
+		return nil
+	}
+}
+
+func OptSetSize(size int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Size: size}); err != nil {
+			return err
+		}
+		s.Header.Size = size
+		return nil
+	}
+}
+
+func OptSetFamily(family string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Family: family}); err != nil {
+			return err
+		}
+		s.Header.Family = family
+		return nil
+	}
+}
+
+func OptSetRange(srange string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Range: srange}); err != nil {
+			return err
+		}
+		s.Header.Range = srange
+		return nil
+	}
+}
+
+func OptSetHashsize(hashsize int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Hashsize: hashsize}); err != nil {
+			return err
+		}
+		s.Header.Hashsize = hashsize
+		return nil
+	}
+}
+
+func OptSetMaxelem(maxelem int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Maxelem: maxelem}); err != nil {
+			return err
+		}
+		s.Header.Maxelem = maxelem
+		return nil
+	}
+}
+
+func OptSetReferences(references int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{References: references}); err != nil {
+			return err
+		}
+		s.Header.References = references
+		return nil
+	}
+}
+
+func OptSetTimeout(timeout int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Timeout: timeout}); err != nil {
+			return err
+		}
+		s.Header.Timeout = timeout
+		return nil
+	}
+}
+
+func OptSetNetmask(netmask int) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Netmask: netmask}); err != nil {
+			return err
+		}
+		s.Header.Netmask = netmask
+		return nil
+	}
+}
+
+func OptSetCounters(counters string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Counters: &counters}); err != nil {
+			return err
+		}
+		s.Header.Counters = &counters
+		return nil
+	}
+}
+
+func OptSetComment(comment string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Comment: &comment}); err != nil {
+			return err
+		}
+		s.Header.Comment = &comment
+		return nil
+	}
+}
+
+func OptSetSKBInfo(skbinfo string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{SKBInfo: &skbinfo}); err != nil {
+			return err
+		}
+		s.Header.SKBInfo = &skbinfo
+		return nil
+	}
+}
+
+func OptSetForceadd(forceadd string) SetOpt {
+	return func(s *Set) error {
+		ensureHeader(s)
+		if err := validateSetHeader(s.Type, Header{Forceadd: &forceadd}); err != nil {
+			return err
+		}
+		s.Header.Forceadd = &forceadd
+		return nil
+	}
+}
+
+func validateMemberForSet(s *Set, m *Member) error {
+	if s == nil || m == nil || s.Header == nil {
+		return nil
+	}
+
+	if s.Header.Comment == nil && m.Comment != "" {
+		return errors.New("comment options used with incompatible set")
+	}
+
+	if s.Header.Timeout == 0 && m.Timeout != 0 {
+		return errors.New("timeout options used with incompatible set")
+	}
+
+	if s.Header.Counters == nil && m.Packets != 0 {
+		return errors.New("packets options used with incompatible set")
+	}
+
+	if s.Header.Counters == nil && m.Bytes != 0 {
+		return errors.New("bytes options used with incompatible set")
+	}
+
+	if s.Header.SKBInfo == nil && m.SKBMark != "" {
+		return errors.New("skbmark options used with incompatible set")
+	}
+
+	if s.Header.SKBInfo == nil && m.SKBPrio != "" {
+		return errors.New("skbprio options used with incompatible set")
+	}
+
+	if s.Header.SKBInfo == nil && m.SKBQueue != "" {
+		return errors.New("skbqueue options used with incompatible set")
+	}
+
+	return nil
+}
+
+func validateSetHeader(sType SetType, header Header) error {
+	/*
+		{ "Family","family", `!= ""` },
+		{ "Range","range", `!= ""` },
+		{ "Hashsize","hashsize", "!= 0" },
+		{ "Maxelem","maxelem", "!= 0" },
+		{ "Memsize","memsize", "!= 0" },
+		{ "References","references", "!= 0" },
+		{ "Timeout","timeout", "!= 0" },
+		{ "Netmask","netmask", "!= 0" },
+		{ "Size","size", "!= 0" },
+		{ "Counters","counters", "!= nil" },
+		{ "Comment","comment", "!= nil" },
+		{ "SKBInfo","skbinfo", "!= nil" },
+		{ "Forceadd","forceadd", "!= nil" },
+	*/
+
+	compatList, ok := HeaderValidationMap[sType]
+	if !ok {
+		return errors.Errorf("Unknown set type %s", sType)
+	}
+
+	if header.Family != "" {
+		if !strings.Contains(compatList, "-family-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "family")
+		}
+
+	}
+
+	if header.Range != "" {
+		if !strings.Contains(compatList, "-range-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "range")
+		}
+
+	}
+
+	if header.Hashsize != 0 {
+		if !strings.Contains(compatList, "-hashsize-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "hashsize")
+		}
+
+	}
+
+	if header.Maxelem != 0 {
+		if !strings.Contains(compatList, "-maxelem-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "maxelem")
+		}
+
+	}
+
+	if header.References != 0 {
+		if !strings.Contains(compatList, "-references-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "references")
+		}
+
+	}
+
+	if header.Timeout != 0 {
+		if !strings.Contains(compatList, "-timeout-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "timeout")
+		}
+
+	}
+
+	if header.Netmask != 0 {
+		if !strings.Contains(compatList, "-netmask-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "netmask")
+		}
+
+	}
+
+	if header.Size != 0 {
+		if !strings.Contains(compatList, "-size-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "size")
+		}
+
+	}
+
+	if header.Counters != nil {
+		if !strings.Contains(compatList, "-counters-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "counters")
+		}
+
+	}
+
+	if header.Comment != nil {
+		if !strings.Contains(compatList, "-comment-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "comment")
+		}
+
+	}
+
+	if header.SKBInfo != nil {
+		if !strings.Contains(compatList, "-skbinfo-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "skbinfo")
+		}
+
+	}
+
+	if header.Forceadd != nil {
+		if !strings.Contains(compatList, "-forceadd-") {
+			return errors.Errorf("Set of Type %s incompatible with header %s", sType, "forceadd")
+		}
+
+	}
+
+	return nil
+}
+
+var (
+	HeaderValidationMap = map[SetType]string{
+		SetBitmapIp:       "-range-netmask-timeout-counters-comment-skbinfo-",
+		SetBitmapIpMac:    "-range-timeout-counters-comment-skbinfo-",
+		SetBitmapPort:     "-range-timeout-counters-comment-skbinfo-",
+		SetHashIp:         "-family-hashsize-maxelem-netmask-timeout-counters-comment-skbinfo-",
+		SetHashMac:        "-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashNet:        "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashNetNet:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashIpPort:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashNetPort:    "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashIpPortIp:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashIpPortNet:  "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashIpMark:     "-family-markmask-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashNetPortNet: "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashNetIface:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetListSet:        "-size-timeout-counters-comment-skbinfo-",
+	}
+)
+
+// TODO stupid thing doesn't work, empty struct is nil anyway
+func ensureHeader(s *Set) {
+	if s.Header == nil {
+		s.Header = &Header{}
+	}
+}

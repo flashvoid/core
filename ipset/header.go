@@ -11,11 +11,29 @@ type Header struct {
 	References int     `xml:" references,omitempty" json:"references,omitempty"`
 	Timeout    int     `xml:" timeout,omitempty" json:"timeout,omitempty"`
 	Netmask    int     `xml:" netmask,omitempty" json:"netmask,omitempty"`
+	Size       int     `xml:" size,omitempty" json:"size,omitempty"`
 	Counters   *string `xml:" counters,omitempty" json:"counters,omitempty"`
 	Comment    *string `xml:" comment,omitempty" json:"comment,omitempty"`
 	SKBInfo    *string `xml:" skbinfo,omitempty" json:"skbinfo,omitempty"`
 	Forceadd   *string `xml:" forceadd,omitempty" json:"forceadd,omitempty"`
 }
+
+/*
+
+{ "Family", "family", "string" },
+{ "Range", "range", "string" },
+{ "Hashsize", "hashsize", "int" },
+{ "Maxelem", "maxelem", "int" },
+{ "Memsize", "memsize", "int" },
+{ "References", "references", "int" },
+{ "Timeout", "timeout", "int" },
+{ "Netmask", "netmask", "int" },
+{ "Counters", "counters", "*string" },
+{ "Comment", "comment", "*string" },
+{ "SKBInfo", "skbinfo", "*string" },
+{ "Forceadd", "forceadd", "*string" },
+
+*/
 
 func (h *Header) render() string {
 	var result string
@@ -53,6 +71,10 @@ func (h *Header) render() string {
 
 	if h.Netmask != 0 {
 		result += fmt.Sprintf(" netmask %d", h.Netmask)
+	}
+
+	if h.Size != 0 {
+		result += fmt.Sprintf(" size %d", h.Size)
 	}
 
 	if h.Counters != nil {

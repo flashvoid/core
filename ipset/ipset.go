@@ -1,22 +1,3 @@
-/*
-<ipsets>
-	<ipset name="host">
-		<type>hash:net</type>
-		<revision>6</revision>
-		<header>
-			<family>inet</family><hashsize>1024</hashsize><maxelem>65536</maxelem>
-			<memsize>448</memsize>
-			<references>0</references>
-		</header>
-		<members>
-			<member>
-				<elem>10.0.0.0/30</elem>
-			</member>
-		</members>
-	</ipset>
-</ipsets>
-*/
-
 package ipset
 
 import (
@@ -39,7 +20,6 @@ type Handle struct {
 	stdout    io.ReadCloser
 	stderr    io.ReadCloser
 	isRunning func(*Handle) bool
-	// TODO waitTimeout / optFunc
 }
 
 var (
@@ -86,27 +66,6 @@ func New(options ...OptFunc) (*Handle, error) {
 	h.stdout, err = h.cmd.StdoutPipe()
 
 	return &h, err
-}
-
-// OptFunc is a signature for option functions for use with New()
-// TODO Rename into HandleOptFunc
-type OptFunc func(*Handle) error
-
-// SetBin is an options for New() to use non default location of ipset binary.
-func SetBin(bin string) OptFunc {
-	return func(h *Handle) error {
-		h.ipsetBin = bin
-		return nil
-	}
-}
-
-// SetArgs is an options for New() to use non default arguments for call to ipset binary.
-// TODO rename HandleArgs
-func SetArgs(args ...string) OptFunc {
-	return func(h *Handle) error {
-		h.args = args
-		return nil
-	}
 }
 
 func (h *Handle) Start() error {
@@ -262,6 +221,35 @@ func (h *Handle) Destroy(s *Set) error {
 	}
 
 	return nil
+}
+
+func (h *Handle) IsSuccessful() bool {
+	if h.cmd == nil || h.cmd.ProcessState == nil {
+		return false
+	}
+
+	return h.cmd.ProcessState.Success()
+}
+
+// OptFunc is a signature for option functions for use with New()
+// TODO Rename into HandleOptFunc
+type OptFunc func(*Handle) error
+
+// SetBin is an options for New() to use non default location of ipset binary.
+func SetBin(bin string) OptFunc {
+	return func(h *Handle) error {
+		h.ipsetBin = bin
+		return nil
+	}
+}
+
+// SetArgs is an options for New() to use non default arguments for call to ipset binary.
+// TODO rename HandleArgs
+func SetArgs(args ...string) OptFunc {
+	return func(h *Handle) error {
+		h.args = args
+		return nil
+	}
 }
 
 // Load ipset config from system.

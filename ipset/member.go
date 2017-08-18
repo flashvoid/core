@@ -7,14 +7,15 @@ import (
 )
 
 type Member struct {
-	Elem      string `xml:" elem" json:"elem"`
-	Comment   string `xml:" comment,omitempty" json:"comment,omitempty"`
-	Timeout   int    `xml:" timeout,omitempty" json:"timeout,omitempty"`
-	Packets   int    `xml:" packets,omitempty" json:"packets,omitempty"`
-	Bytes     int    `xml:" bytes,omitempty" json:"bytes,omitempty"`
-	SBKMark   string `xml:" skbmark,omitempty" json:"skbmark,omitempty"`
-	SKBPrio   string `xml:" skbprio,omitempty" json:"skbprio,omitempty"`
-	SKBQueue  string `xml:" skbqueue,omitempty" json:"skbqueue,omitempty"`
+	Elem      string  `xml:" elem" json:"elem"`
+	Comment   string  `xml:" comment,omitempty" json:"comment,omitempty"`
+	NoMatch   *string `xml:" nomatch,omitempty" json:"nomatch,omitempty"`
+	Timeout   int     `xml:" timeout,omitempty" json:"timeout,omitempty"`
+	Packets   int     `xml:" packets,omitempty" json:"packets,omitempty"`
+	Bytes     int     `xml:" bytes,omitempty" json:"bytes,omitempty"`
+	SKBMark   string  `xml:" skbmark,omitempty" json:"skbmark,omitempty"`
+	SKBPrio   string  `xml:" skbprio,omitempty" json:"skbprio,omitempty"`
+	SKBQueue  string  `xml:" skbqueue,omitempty" json:"skbqueue,omitempty"`
 	parentSet *Set
 }
 
@@ -37,9 +38,10 @@ func NewMember(elem string, set *Set, opts ...MemberOpt) (*Member, error) {
 
 type MemberOpt func(*Member) error
 
-func OptComment(comment string) MemberOpt {
+func OptMemComment(comment string) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.Comment == nil {
+		tm := &Member{Comment: comment}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("comment options used with incompatible set")
 		}
 		m.Comment = comment
@@ -47,9 +49,10 @@ func OptComment(comment string) MemberOpt {
 	}
 }
 
-func OptTimeout(timeout int) MemberOpt {
+func OptMemTimeout(timeout int) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.Timeout == 0 {
+		tm := &Member{Timeout: timeout}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("timeout options used with incompatible set")
 		}
 		m.Timeout = timeout
@@ -57,9 +60,15 @@ func OptTimeout(timeout int) MemberOpt {
 	}
 }
 
-func OptPackets(packets int) MemberOpt {
+func OptMemNomatch(m *Member) error {
+	m.NoMatch = new(string)
+	return nil
+}
+
+func OptMemPackets(packets int) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.Counters == nil {
+		tm := &Member{Packets: packets}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("packets options used with incompatible set")
 		}
 		m.Packets = packets
@@ -67,9 +76,10 @@ func OptPackets(packets int) MemberOpt {
 	}
 }
 
-func OptBytes(bytes int) MemberOpt {
+func OptMemBytes(bytes int) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.Counters == nil {
+		tm := &Member{Bytes: bytes}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("bytes options used with incompatible set")
 		}
 		m.Bytes = bytes
@@ -77,19 +87,21 @@ func OptBytes(bytes int) MemberOpt {
 	}
 }
 
-func OptSBKMark(sbkmark string) MemberOpt {
+func OptMemSKBMark(skbmark string) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.SKBInfo == nil {
+		tm := &Member{SKBMark: skbmark}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("skbmark options used with incompatible set")
 		}
-		m.SBKMark = sbkmark
+		m.SKBMark = skbmark
 		return nil
 	}
 }
 
-func OptSKBPrio(skbprio string) MemberOpt {
+func OptMemSKBPrio(skbprio string) MemberOpt {
 	return func(m *Member) error {
-		if m.parentSet != nil && m.parentSet.Header != nil && m.parentSet.Header.SKBInfo == nil {
+		tm := &Member{SKBPrio: skbprio}
+		if err := validateMemberForSet(m.parentSet, tm); err != nil {
 			return errors.New("skbprio options used with incompatible set")
 		}
 		m.SKBPrio = skbprio
@@ -105,6 +117,9 @@ func (m Member) Render() string {
 	if m.Comment != "" {
 		result += fmt.Sprintf(" %s", m.Comment)
 	}
+	if m.NoMatch != nil {
+		result += fmt.Sprintf(" nomatch")
+	}
 	if m.Timeout != 0 {
 		result += fmt.Sprintf(" %d", m.Timeout)
 	}
@@ -114,8 +129,8 @@ func (m Member) Render() string {
 	if m.Bytes != 0 {
 		result += fmt.Sprintf(" %d", m.Bytes)
 	}
-	if m.SBKMark != "" {
-		result += fmt.Sprintf(" %s", m.SBKMark)
+	if m.SKBMark != "" {
+		result += fmt.Sprintf(" %s", m.SKBMark)
 	}
 	if m.SKBPrio != "" {
 		result += fmt.Sprintf(" %s", m.SKBPrio)

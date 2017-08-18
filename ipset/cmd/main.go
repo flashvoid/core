@@ -68,7 +68,7 @@ func main() {
 			panic(err)
 		}
 	case "create":
-		err = handle.Create(&ipset.Set{Name: *flagSet1, Type: *flagType})
+		err = handle.Create(&ipset.Set{Name: *flagSet1, Type: ipset.SetType(*flagType)})
 		if err != nil {
 			panic(err)
 		}
