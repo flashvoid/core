@@ -115,29 +115,34 @@ func (m Member) Render() string {
 	result += m.Elem
 
 	if m.Comment != "" {
-		result += fmt.Sprintf(" %s", m.Comment)
+		result += fmt.Sprintf(" comment %s", m.Comment)
 	}
 	if m.NoMatch != nil {
 		result += fmt.Sprintf(" nomatch")
 	}
 	if m.Timeout != 0 {
-		result += fmt.Sprintf(" %d", m.Timeout)
+		result += fmt.Sprintf(" timeout %d", m.Timeout)
 	}
 	if m.Packets != 0 {
-		result += fmt.Sprintf(" %d", m.Packets)
+		result += fmt.Sprintf(" packets %d", m.Packets)
 	}
 	if m.Bytes != 0 {
-		result += fmt.Sprintf(" %d", m.Bytes)
+		result += fmt.Sprintf(" bytes %d", m.Bytes)
 	}
 	if m.SKBMark != "" {
-		result += fmt.Sprintf(" %s", m.SKBMark)
+		result += fmt.Sprintf(" skbmark %s", m.SKBMark)
 	}
 	if m.SKBPrio != "" {
-		result += fmt.Sprintf(" %s", m.SKBPrio)
+		result += fmt.Sprintf(" skbprio %s", m.SKBPrio)
 	}
 	if m.SKBQueue != "" {
-		result += fmt.Sprintf(" %s", m.SKBQueue)
+		result += fmt.Sprintf(" skbqueue %s", m.SKBQueue)
 	}
 
 	return result
 }
+
+const (
+	MemberFamilyInet  = "inet"
+	MemberFamilyInet6 = "inet6"
+)

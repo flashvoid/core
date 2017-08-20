@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func TestNew(t *testing.T) {
@@ -15,12 +17,19 @@ func TestNew(t *testing.T) {
 		expect  func(*Handle) bool
 	}{
 		{
-			name: "test set binary",
+			name: "create new set",
 			options: []OptFunc{
 				SetBin("/test"),
 				SetArgs("save"),
 			},
 			expect: func(h *Handle) bool { return h.ipsetBin == "/test" && h.args[0] == "save" },
+		},
+		{
+			name: "fail to create new set",
+			options: []OptFunc{
+				func(h *Handle) error { return errors.New("Dummy err") },
+			},
+			expect: func(h *Handle) bool { return h == nil },
 		},
 	}
 
@@ -155,7 +164,7 @@ func TestCreate(t *testing.T) {
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},
-				Header:  &Header{Hashsize: 1}},
+				Header:  Header{Hashsize: 1}},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "create super hash:net  hashsize 1\n" },
 		},
 	}
@@ -187,7 +196,7 @@ func TestFlush(t *testing.T) {
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},
-				Header:  &Header{Hashsize: 1}},
+				Header:  Header{Hashsize: 1}},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "flush super\n" },
 		},
 	}
@@ -219,7 +228,7 @@ func TestDestroy(t *testing.T) {
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},
-				Header:  &Header{Hashsize: 1}},
+				Header:  Header{Hashsize: 1}},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "destroy super\n" },
 		},
 	}

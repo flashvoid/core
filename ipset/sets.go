@@ -9,8 +9,9 @@ import (
 
 // Set represents ipset set.
 type Set struct {
-	Name     string   `xml:" name,attr"  json:",omitempty"`
-	Header   *Header  `xml:" header,omitempty" json:"header,omitempty"`
+	Name   string `xml:" name,attr"  json:",omitempty"`
+	Header Header `xml:" header,omitempty" json:"header,omitempty"`
+	//Header   *Header   `xml:" header,omitempty" json:"header,omitempty"`
 	Members  []Member `xml:" members>member,omitempty" json:"members,omitempty"`
 	Revision int      `xml:" revision,omitempty" json:"revision,omitempty"`
 	Type     SetType  `xml:" type,omitempty" json:"type,omitempty"`
@@ -106,7 +107,6 @@ func OptSetRevision(revision int) SetOpt {
 
 func OptSetSize(size int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Size: size}); err != nil {
 			return err
 		}
@@ -117,7 +117,6 @@ func OptSetSize(size int) SetOpt {
 
 func OptSetFamily(family string) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Family: family}); err != nil {
 			return err
 		}
@@ -128,7 +127,6 @@ func OptSetFamily(family string) SetOpt {
 
 func OptSetRange(srange string) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Range: srange}); err != nil {
 			return err
 		}
@@ -139,7 +137,6 @@ func OptSetRange(srange string) SetOpt {
 
 func OptSetHashsize(hashsize int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Hashsize: hashsize}); err != nil {
 			return err
 		}
@@ -150,7 +147,6 @@ func OptSetHashsize(hashsize int) SetOpt {
 
 func OptSetMaxelem(maxelem int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Maxelem: maxelem}); err != nil {
 			return err
 		}
@@ -161,7 +157,6 @@ func OptSetMaxelem(maxelem int) SetOpt {
 
 func OptSetReferences(references int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{References: references}); err != nil {
 			return err
 		}
@@ -172,7 +167,6 @@ func OptSetReferences(references int) SetOpt {
 
 func OptSetTimeout(timeout int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Timeout: timeout}); err != nil {
 			return err
 		}
@@ -183,7 +177,6 @@ func OptSetTimeout(timeout int) SetOpt {
 
 func OptSetNetmask(netmask int) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Netmask: netmask}); err != nil {
 			return err
 		}
@@ -194,7 +187,6 @@ func OptSetNetmask(netmask int) SetOpt {
 
 func OptSetCounters(counters string) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Counters: &counters}); err != nil {
 			return err
 		}
@@ -205,7 +197,6 @@ func OptSetCounters(counters string) SetOpt {
 
 func OptSetComment(comment string) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{Comment: &comment}); err != nil {
 			return err
 		}
@@ -216,7 +207,6 @@ func OptSetComment(comment string) SetOpt {
 
 func OptSetSKBInfo(skbinfo string) SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
 		if err := validateSetHeader(s.Type, Header{SKBInfo: &skbinfo}); err != nil {
 			return err
 		}
@@ -225,19 +215,19 @@ func OptSetSKBInfo(skbinfo string) SetOpt {
 	}
 }
 
-func OptSetForceadd(forceadd string) SetOpt {
+func OptSetForceadd() SetOpt {
 	return func(s *Set) error {
-		ensureHeader(s)
-		if err := validateSetHeader(s.Type, Header{Forceadd: &forceadd}); err != nil {
+		if err := validateSetHeader(s.Type, Header{Forceadd: NoVal}); err != nil {
 			return err
 		}
-		s.Header.Forceadd = &forceadd
+		s.Header.Forceadd = NoVal
 		return nil
 	}
 }
 
 func validateMemberForSet(s *Set, m *Member) error {
-	if s == nil || m == nil || s.Header == nil {
+	if s == nil || m == nil {
+		//	if s == nil || m == nil || s.Header == nil {
 		return nil
 	}
 
@@ -386,24 +376,24 @@ var (
 		SetBitmapIp:       "-range-netmask-timeout-counters-comment-skbinfo-",
 		SetBitmapIpMac:    "-range-timeout-counters-comment-skbinfo-",
 		SetBitmapPort:     "-range-timeout-counters-comment-skbinfo-",
-		SetHashIp:         "-family-hashsize-maxelem-netmask-timeout-counters-comment-skbinfo-",
-		SetHashMac:        "-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashNet:        "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashNetNet:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashIpPort:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashNetPort:    "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashIpPortIp:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashIpPortNet:  "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashIpMark:     "-family-markmask-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashNetPortNet: "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
-		SetHashNetIface:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-",
+		SetHashIp:         "-family-hashsize-maxelem-netmask-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashMac:        "-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashNet:        "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashNetNet:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIpPort:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashNetPort:    "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIpPortIp:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIpPortNet:  "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIpMark:     "-family-markmask-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashNetPortNet: "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashNetIface:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetListSet:        "-size-timeout-counters-comment-skbinfo-",
 	}
 )
 
-// TODO stupid thing doesn't work, empty struct is nil anyway
-func ensureHeader(s *Set) {
-	if s.Header == nil {
-		s.Header = &Header{}
-	}
-}
+var (
+	// NoVal used in Header and Member structs as a value for fields
+	// which don't have value. Like Header.Comment or Member.NoMatch.
+	// This is the artifact of xml parsing.
+	NoVal = new(string)
+)

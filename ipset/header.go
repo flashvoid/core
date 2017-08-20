@@ -57,10 +57,6 @@ func (h *Header) render() string {
 		result += fmt.Sprintf(" maxelem %d", h.Maxelem)
 	}
 
-	if h.Memsize != 0 {
-		result += fmt.Sprintf(" memsize %d", h.Memsize)
-	}
-
 	if h.References != 0 {
 		result += fmt.Sprintf(" references %d", h.References)
 	}
