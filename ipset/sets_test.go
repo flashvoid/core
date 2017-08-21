@@ -1,10 +1,23 @@
+// Copyright (c) 2017 Pani Networks
+// All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package ipset
 
 import (
 	"strings"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestRender(t *testing.T) {
@@ -216,91 +229,6 @@ func TestRender(t *testing.T) {
 	}
 }
 
-func TestNewMember(t *testing.T) {
-	cases := []struct {
-		name   string
-		set    Set
-		elem   string
-		args   []MemberOpt
-		expect func(*Member, error) bool
-	}{
-		{
-			name:   "error when set doesn't allow comments",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemComment("test")},
-			expect: func(m *Member, e error) bool { return e.Error() == "comment options used with incompatible set" },
-		},
-		{
-			name:   "set allows comments",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{Comment: new(string)}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemComment("test")},
-			expect: func(m *Member, e error) bool { return m.Comment == "test" && e == nil },
-		},
-		{
-			name:   "error when set doesn't allow timeouts",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemTimeout(10)},
-			expect: func(m *Member, e error) bool { return e.Error() == "timeout options used with incompatible set" },
-		},
-		{
-			name:   "set allows timeouts",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{Timeout: 1}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemTimeout(10)},
-			expect: func(m *Member, e error) bool { return m.Timeout == 10 && e == nil },
-		},
-		{
-			name:   "error when set doesn't allow counters",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemBytes(10), OptMemPackets(2)},
-			expect: func(m *Member, e error) bool { return e.Error() == "bytes options used with incompatible set" },
-		},
-		{
-			name:   "set allows counters",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{Counters: new(string)}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemBytes(10), OptMemPackets(2)},
-			expect: func(m *Member, e error) bool { return m.Bytes == 10 && e == nil },
-		},
-		{
-			name:   "error when set doesn't allow skbinfo",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemSKBPrio("10")},
-			expect: func(m *Member, e error) bool { return e.Error() == "skbprio options used with incompatible set" },
-		},
-		{
-			name:   "set allows skbinfo",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{SKBInfo: new(string)}},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemSKBPrio("10")},
-			expect: func(m *Member, e error) bool { return m.SKBPrio == "10" && e == nil },
-		},
-		{
-			name:   "test nomatch",
-			set:    Set{Name: "super", Type: SetHashNet},
-			elem:   "foo",
-			args:   []MemberOpt{OptMemNomatch},
-			expect: func(m *Member, e error) bool { return *m.NoMatch == "" && e == nil },
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m, err := NewMember(tc.elem, &tc.set, tc.args...)
-			spew.Dump(m)
-			t.Log(err)
-			if !tc.expect(m, err) {
-				t.Fatalf("Unexpected NewMember() %+v, %s", m, err)
-			}
-		})
-	}
-}
-
 func TestNewSet(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -313,84 +241,84 @@ func TestNewSet(t *testing.T) {
 			name:    "make simple set",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetFamily("inet"), OptSetRevision(1)},
+			args:    []SetOpt{SetWithFamily("inet"), SetWithRevision(1)},
 			expect:  func(s *Set, e error) bool { return s.Header.Family == "inet" && e == nil },
 		},
 		{
 			name:    "test set size",
 			setName: "super",
 			setType: SetListSet,
-			args:    []SetOpt{OptSetSize(4)},
+			args:    []SetOpt{SetWithSize(4)},
 			expect:  func(s *Set, e error) bool { return s.Header.Size == 4 && e == nil },
 		},
 		{
 			name:    "test set size with error",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetSize(4)},
+			args:    []SetOpt{SetWithSize(4)},
 			expect:  func(s *Set, e error) bool { return strings.Contains(e.Error(), "incompatible") },
 		},
 		{
 			name:    "test set range",
 			setName: "super",
 			setType: SetBitmapIp,
-			args:    []SetOpt{OptSetRange("192.168.0.0/16")},
+			args:    []SetOpt{SetWithRange("192.168.0.0/16")},
 			expect:  func(s *Set, e error) bool { return s.Header.Range == "192.168.0.0/16" && e == nil },
 		},
 		{
 			name:    "test set range with error",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetRange("192.168.0.0/16")},
+			args:    []SetOpt{SetWithRange("192.168.0.0/16")},
 			expect:  func(s *Set, e error) bool { return strings.Contains(e.Error(), "incompatible") },
 		},
 		{
 			name:    "test hashsize",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetHashsize(4)},
+			args:    []SetOpt{SetWithHashsize(4)},
 			expect:  func(s *Set, e error) bool { return s.Header.Hashsize == 4 && e == nil },
 		},
 		{
 			name:    "test hashsize with error",
 			setName: "super",
 			setType: SetBitmapIp,
-			args:    []SetOpt{OptSetHashsize(4)},
+			args:    []SetOpt{SetWithHashsize(4)},
 			expect:  func(s *Set, e error) bool { return strings.Contains(e.Error(), "incompatible") },
 		},
 		{
 			name:    "test maxelem",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetMaxelem(4)},
+			args:    []SetOpt{SetWithMaxelem(4)},
 			expect:  func(s *Set, e error) bool { return s.Header.Maxelem == 4 && e == nil },
 		},
 		{
 			name:    "test netmask with error",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetNetmask(30)},
+			args:    []SetOpt{SetWithNetmask(30)},
 			expect:  func(s *Set, e error) bool { return strings.Contains(e.Error(), "incompatible") },
 		},
 		{
 			name:    "test netmask",
 			setName: "super",
 			setType: SetBitmapIp,
-			args:    []SetOpt{OptSetNetmask(30)},
+			args:    []SetOpt{SetWithNetmask(30)},
 			expect:  func(s *Set, e error) bool { return s.Header.Netmask == 30 && e == nil },
 		},
 		{
 			name:    "test forceadd with error",
 			setName: "super",
 			setType: SetBitmapIp,
-			args:    []SetOpt{OptSetForceadd()},
+			args:    []SetOpt{SetWithForceadd()},
 			expect:  func(s *Set, e error) bool { return strings.Contains(e.Error(), "incompatible") },
 		},
 		{
 			name:    "test forceadd",
 			setName: "super",
 			setType: SetHashNet,
-			args:    []SetOpt{OptSetForceadd()},
+			args:    []SetOpt{SetWithForceadd()},
 			expect:  func(s *Set, e error) bool { return s.Header.Forceadd == NoVal && e == nil },
 		},
 	}

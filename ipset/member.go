@@ -1,3 +1,18 @@
+// Copyright (c) 2017 Pani Networks
+// All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package ipset
 
 import (
@@ -6,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Member is a representation of ipset member.
 type Member struct {
 	Elem      string  `xml:" elem" json:"elem"`
 	Comment   string  `xml:" comment,omitempty" json:"comment,omitempty"`
@@ -19,10 +35,11 @@ type Member struct {
 	parentSet *Set
 }
 
-// NewMember creates a new set member, it takes an elemnt text
-// a pointer to the set and a list of options that could be used to set various fields.
-// If pointer to set type is provided function will return error when
-// requested set type is incompatible with collection of options.
+// NewMember creates a new  member.
+// Some member options can't be used with certain Set type, to assert that
+// requested member can be used with a desired set you can provide a pointer to the
+// desired Set.
+// Pointer to the Set is allowed to be nil in which case no type assertion performed.
 func NewMember(elem string, set *Set, opts ...MemberOpt) (*Member, error) {
 	m := Member{parentSet: set, Elem: elem}
 
@@ -36,9 +53,12 @@ func NewMember(elem string, set *Set, opts ...MemberOpt) (*Member, error) {
 	return &m, nil
 }
 
+// MemberOpt is a signature of for option function that
+// can be used with NewMember() to produce a member with desired config.
 type MemberOpt func(*Member) error
 
-func OptMemComment(comment string) MemberOpt {
+// MemberWithComment is an option to create member with comment.
+func MemberWithComment(comment string) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{Comment: comment}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -49,7 +69,8 @@ func OptMemComment(comment string) MemberOpt {
 	}
 }
 
-func OptMemTimeout(timeout int) MemberOpt {
+// MemberWithTimeout is an option to create member with timeout.
+func MemberWithTimeout(timeout int) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{Timeout: timeout}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -60,12 +81,14 @@ func OptMemTimeout(timeout int) MemberOpt {
 	}
 }
 
-func OptMemNomatch(m *Member) error {
+// MemberWithNomatch is an option to create member with nomatch.
+func MemberWithNomatch(m *Member) error {
 	m.NoMatch = new(string)
 	return nil
 }
 
-func OptMemPackets(packets int) MemberOpt {
+// MemberWithPackets is an option to create member with packets field initialized.
+func MemberWithPackets(packets int) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{Packets: packets}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -76,7 +99,8 @@ func OptMemPackets(packets int) MemberOpt {
 	}
 }
 
-func OptMemBytes(bytes int) MemberOpt {
+// MemberWithBytes is an option to create member with bytes field initialized.
+func MemberWithBytes(bytes int) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{Bytes: bytes}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -87,7 +111,8 @@ func OptMemBytes(bytes int) MemberOpt {
 	}
 }
 
-func OptMemSKBMark(skbmark string) MemberOpt {
+// MemberWithSKBMark is an option to create member with skbmark field initialized.
+func MemberWithSKBMark(skbmark string) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{SKBMark: skbmark}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -98,7 +123,8 @@ func OptMemSKBMark(skbmark string) MemberOpt {
 	}
 }
 
-func OptMemSKBPrio(skbprio string) MemberOpt {
+// MemberWithSKBPrio is an option to create member with skbprio field initialized.
+func MemberWithSKBPrio(skbprio string) MemberOpt {
 	return func(m *Member) error {
 		tm := &Member{SKBPrio: skbprio}
 		if err := validateMemberForSet(m.parentSet, tm); err != nil {
@@ -109,7 +135,8 @@ func OptMemSKBPrio(skbprio string) MemberOpt {
 	}
 }
 
-func (m Member) Render() string {
+// render produces string representation of member with all it's headers.
+func (m Member) render() string {
 	var result string
 
 	result += m.Elem

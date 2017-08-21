@@ -1,3 +1,18 @@
+// Copyright (c) 2017 Pani Networks
+// All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package ipset
 
 import (
@@ -35,7 +50,7 @@ func TestNew(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, _ := New(tc.options...)
+			res, _ := NewHandle(tc.options...)
 			if !tc.expect(res) {
 				t.Fatalf(tc.name)
 			}
@@ -60,18 +75,18 @@ func TestWrite(t *testing.T) {
 		{
 			name: "fail on closed process",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: defaultStateFunc,
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: defaultStateFunc,
 			},
 			expect: func(h *Handle, err error) bool { return strings.Contains(err.Error(), "Process not started") },
 		},
 		{
 			name: "fail on unexpected write result",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "Test" },
 		},
@@ -98,9 +113,9 @@ func TestAdd(t *testing.T) {
 		{
 			name: "fail on unexpected Add()",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			set:    &Set{Name: "super", Type: "hash:net", Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}}},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "add super foo\nadd super bar\n" },
@@ -128,9 +143,9 @@ func TestDelete(t *testing.T) {
 		{
 			name: "fail on unexpected Delete()",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			set:    &Set{Name: "super", Type: "hash:net", Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}}},
 			expect: func(h *Handle, err error) bool { return testBuffer.String() == "del super foo\ndel super bar\n" },
@@ -158,9 +173,9 @@ func TestCreate(t *testing.T) {
 		{
 			name: "fail on unexpected Create()",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},
@@ -190,9 +205,9 @@ func TestFlush(t *testing.T) {
 		{
 			name: "fail on unexpected Flush()",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},
@@ -222,9 +237,9 @@ func TestDestroy(t *testing.T) {
 		{
 			name: "fail on unexpected Destroy()",
 			handle: &Handle{
-				cmd:       &exec.Cmd{},
-				stdin:     &testBuffer,
-				isRunning: func(*Handle) bool { return true },
+				cmd:    &exec.Cmd{},
+				stdin:  &testBuffer,
+				isOpen: func(*Handle) bool { return true },
 			},
 			set: &Set{Name: "super", Type: "hash:net",
 				Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}},

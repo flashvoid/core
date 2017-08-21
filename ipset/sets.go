@@ -1,3 +1,18 @@
+// Copyright (c) 2017 Pani Networks
+// All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package ipset
 
 import (
@@ -9,14 +24,14 @@ import (
 
 // Set represents ipset set.
 type Set struct {
-	Name   string `xml:" name,attr"  json:",omitempty"`
-	Header Header `xml:" header,omitempty" json:"header,omitempty"`
-	//Header   *Header   `xml:" header,omitempty" json:"header,omitempty"`
+	Name     string   `xml:" name,attr"  json:",omitempty"`
+	Header   Header   `xml:" header,omitempty" json:"header,omitempty"`
 	Members  []Member `xml:" members>member,omitempty" json:"members,omitempty"`
 	Revision int      `xml:" revision,omitempty" json:"revision,omitempty"`
 	Type     SetType  `xml:" type,omitempty" json:"type,omitempty"`
 }
 
+// NewSet creates new Set of a given type.
 func NewSet(name string, sType SetType, options ...SetOpt) (*Set, error) {
 	s := Set{Name: name, Type: sType}
 
@@ -30,8 +45,7 @@ func NewSet(name string, sType SetType, options ...SetOpt) (*Set, error) {
 	return &s, nil
 }
 
-// Render return string reprsentation of the set compatible with `ipset restore`
-// or with interactive session.
+// Render Set for for use with interactive functions of handler.
 func (s *Set) Render(rType RenderType) string {
 	var result string
 
@@ -47,17 +61,17 @@ func (s *Set) Render(rType RenderType) string {
 	case RenderSave:
 		result += fmt.Sprintf("create %s %s %s\n", s.Name, s.Type, s.Header.render())
 		for _, member := range s.Members {
-			result += fmt.Sprintf("add %s %s\n", s.Name, member.Render())
+			result += fmt.Sprintf("add %s %s\n", s.Name, member.render())
 		}
 	// only add members
 	case RenderAdd:
 		for _, member := range s.Members {
-			result += fmt.Sprintf("add %s %s\n", s.Name, member.Render())
+			result += fmt.Sprintf("add %s %s\n", s.Name, member.render())
 		}
 	// only delete members
 	case RenderDelete:
 		for _, member := range s.Members {
-			result += fmt.Sprintf("del %s %s\n", s.Name, member.Render())
+			result += fmt.Sprintf("del %s %s\n", s.Name, member.render())
 		}
 	// only set name for test
 	case RenderTest:
@@ -106,16 +120,20 @@ const (
 	SetListSet        = "list:set"
 )
 
+// SetOpt is a signature of option function that can be used with NewSet()
+// to produce a Set with desired config.
 type SetOpt func(*Set) error
 
-func OptSetRevision(revision int) SetOpt {
+// SetWithRevision is an option to create Set with revision field initialized.
+func SetWithRevision(revision int) SetOpt {
 	return func(s *Set) error {
 		s.Revision = revision
 		return nil
 	}
 }
 
-func OptSetSize(size int) SetOpt {
+// SetWithSize is an option to create Set with size field initialized.
+func SetWithSize(size int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Size: size}); err != nil {
 			return err
@@ -125,7 +143,8 @@ func OptSetSize(size int) SetOpt {
 	}
 }
 
-func OptSetFamily(family string) SetOpt {
+// SetWithFamily is an option to create Set with family field initialized.
+func SetWithFamily(family string) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Family: family}); err != nil {
 			return err
@@ -135,7 +154,8 @@ func OptSetFamily(family string) SetOpt {
 	}
 }
 
-func OptSetRange(srange string) SetOpt {
+// SetWithRange is an option to create Set with range field initialized.
+func SetWithRange(srange string) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Range: srange}); err != nil {
 			return err
@@ -145,7 +165,8 @@ func OptSetRange(srange string) SetOpt {
 	}
 }
 
-func OptSetHashsize(hashsize int) SetOpt {
+// SetWithHashsize is an option to create Set with hashsize field initialized.
+func SetWithHashsize(hashsize int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Hashsize: hashsize}); err != nil {
 			return err
@@ -155,7 +176,8 @@ func OptSetHashsize(hashsize int) SetOpt {
 	}
 }
 
-func OptSetMaxelem(maxelem int) SetOpt {
+// SetWithMaxelem is an option to create Set with maxelem field initialized.
+func SetWithMaxelem(maxelem int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Maxelem: maxelem}); err != nil {
 			return err
@@ -165,7 +187,8 @@ func OptSetMaxelem(maxelem int) SetOpt {
 	}
 }
 
-func OptSetReferences(references int) SetOpt {
+// SetWithReferences is an option to create Set with maxelem reference initialized.
+func SetWithReferences(references int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{References: references}); err != nil {
 			return err
@@ -175,7 +198,8 @@ func OptSetReferences(references int) SetOpt {
 	}
 }
 
-func OptSetTimeout(timeout int) SetOpt {
+// SetWithTimeout is an option to create Set with timeout reference initialized.
+func SetWithTimeout(timeout int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Timeout: timeout}); err != nil {
 			return err
@@ -185,7 +209,8 @@ func OptSetTimeout(timeout int) SetOpt {
 	}
 }
 
-func OptSetNetmask(netmask int) SetOpt {
+// SetWithNetmask is an option to create Set with netmask reference initialized.
+func SetWithNetmask(netmask int) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Netmask: netmask}); err != nil {
 			return err
@@ -195,7 +220,8 @@ func OptSetNetmask(netmask int) SetOpt {
 	}
 }
 
-func OptSetCounters(counters string) SetOpt {
+// SetWithCounters is an option to create Set with counters.
+func SetWithCounters(counters string) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Counters: &counters}); err != nil {
 			return err
@@ -205,7 +231,8 @@ func OptSetCounters(counters string) SetOpt {
 	}
 }
 
-func OptSetComment(comment string) SetOpt {
+// SetWithComment is an option to create Set with comments.
+func SetWithComment(comment string) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Comment: &comment}); err != nil {
 			return err
@@ -215,7 +242,8 @@ func OptSetComment(comment string) SetOpt {
 	}
 }
 
-func OptSetSKBInfo(skbinfo string) SetOpt {
+// SetWithSKBInfo is an option to create Set with skbinfo.
+func SetWithSKBInfo(skbinfo string) SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{SKBInfo: &skbinfo}); err != nil {
 			return err
@@ -225,7 +253,8 @@ func OptSetSKBInfo(skbinfo string) SetOpt {
 	}
 }
 
-func OptSetForceadd() SetOpt {
+// SetWithForceadd is an option to create Set with forceadd.
+func SetWithForceadd() SetOpt {
 	return func(s *Set) error {
 		if err := validateSetHeader(s.Type, Header{Forceadd: NoVal}); err != nil {
 			return err
@@ -235,9 +264,10 @@ func OptSetForceadd() SetOpt {
 	}
 }
 
+// validateMemberForSet checks that given member and set have compatible configuration
+// and can be used together.
 func validateMemberForSet(s *Set, m *Member) error {
 	if s == nil || m == nil {
-		//	if s == nil || m == nil || s.Header == nil {
 		return nil
 	}
 
@@ -289,7 +319,7 @@ func validateSetHeader(sType SetType, header Header) error {
 		{ "Forceadd","forceadd", "!= nil" },
 	*/
 
-	compatList, ok := HeaderValidationMap[sType]
+	compatList, ok := headerValidationMap[sType]
 	if !ok {
 		return errors.Errorf("Unknown set type %s", sType)
 	}
@@ -382,7 +412,7 @@ func validateSetHeader(sType SetType, header Header) error {
 }
 
 var (
-	HeaderValidationMap = map[SetType]string{
+	headerValidationMap = map[SetType]string{
 		SetBitmapIp:       "-range-netmask-timeout-counters-comment-skbinfo-",
 		SetBitmapIpMac:    "-range-timeout-counters-comment-skbinfo-",
 		SetBitmapPort:     "-range-timeout-counters-comment-skbinfo-",

@@ -55,7 +55,7 @@ func main() {
 	var handle ipset.Handle
 
 	if *flagInteractive {
-		handle, err := ipset.New()
+		handle, err := ipset.NewHandle()
 		if err != nil {
 			panic(err)
 		}
