@@ -7,19 +7,21 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
 type Handle struct {
-	cmd       *exec.Cmd
-	args      []string
-	ipsetBin  string
-	stdin     io.WriteCloser
-	stdout    io.ReadCloser
-	stderr    io.ReadCloser
-	isRunning func(*Handle) bool
+	cmd               *exec.Cmd
+	args              []string
+	ipsetBin          string
+	stdin             io.WriteCloser
+	stdout            io.ReadCloser
+	stderr            io.ReadCloser
+	isRunning         func(*Handle) bool
+	handleInteractive bool
 }
 
 var (
@@ -47,8 +49,10 @@ func New(options ...OptFunc) (*Handle, error) {
 	var err error
 	h := Handle{
 		ipsetBin:  defaultIpsetBin,
-		args:      defaultIpsetArgs,
 		isRunning: defaultStateFunc,
+
+		// debug
+		handleInteractive: true,
 	}
 
 	for _, opt := range options {
@@ -59,11 +63,17 @@ func New(options ...OptFunc) (*Handle, error) {
 
 	}
 
+	if len(h.args) == 0 {
+		h.args = defaultIpsetArgs
+	}
+
 	h.cmd = exec.Command(h.ipsetBin, h.args...)
 
-	h.stdin, err = h.cmd.StdinPipe()
-	h.stderr, err = h.cmd.StderrPipe()
-	h.stdout, err = h.cmd.StdoutPipe()
+	if h.handleInteractive {
+		h.stdin, err = h.cmd.StdinPipe()
+		h.stderr, err = h.cmd.StderrPipe()
+		h.stdout, err = h.cmd.StdoutPipe()
+	}
 
 	return &h, err
 }
@@ -223,6 +233,71 @@ func (h *Handle) Destroy(s *Set) error {
 	return nil
 }
 
+// TODO return ok is version is compatible and version string.
+func IpsetVersion(options ...OptFunc) (bool, string) {
+	return true, ""
+}
+
+func oneshot(set1, set2 *Set, rType RenderType, options ...OptFunc) ([]byte, error) {
+	iset := &Ipset{}
+	if set1 != nil {
+		iset.Sets = append(iset.Sets, set1)
+	}
+	if set2 != nil {
+		iset.Sets = append(iset.Sets, set2)
+	}
+
+	args := renderSet2args(iset, rType)
+	options = append(options, HandleAppendArgs(args...), handleNonInteractive())
+
+	handle, err := New(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("DEBUG in oneshot, executing %s %s\n", handle.ipsetBin, handle.args)
+
+	return handle.cmd.CombinedOutput()
+}
+
+func Add(set *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set, nil, RenderAdd, options...)
+}
+
+func Create(set *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set, nil, RenderCreate, options...)
+}
+
+func Delete(set *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set, nil, RenderDelete, options...)
+}
+
+func Destroy(set *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set, nil, RenderDestroy, options...)
+}
+
+func Flush(set *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set, nil, RenderFlush, options...)
+}
+
+func Swap(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
+	if set1 == nil || set2 == nil {
+		return nil, errors.New("must have exactly 2 non nil sets for swap")
+	}
+	return oneshot(set1, set2, RenderSwap, options...)
+}
+
+func Rename(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
+	if set1 == nil || set2 == nil {
+		return nil, errors.New("must have exactly 2 non nil sets for rename")
+	}
+	return oneshot(set1, set2, RenderRename, options...)
+}
+
+func Test(set1 *Set, options ...OptFunc) ([]byte, error) {
+	return oneshot(set1, nil, RenderTest, options...)
+}
+
 func (h *Handle) IsSuccessful() bool {
 	if h.cmd == nil || h.cmd.ProcessState == nil {
 		return false
@@ -235,26 +310,43 @@ func (h *Handle) IsSuccessful() bool {
 // TODO Rename into HandleOptFunc
 type OptFunc func(*Handle) error
 
-// SetBin is an options for New() to use non default location of ipset binary.
-func SetBin(bin string) OptFunc {
+// HandleWithBin is an options for New() to use non default location of ipset binary.
+func HandleWithBin(bin string) OptFunc {
 	return func(h *Handle) error {
 		h.ipsetBin = bin
 		return nil
 	}
 }
 
-// SetArgs is an options for New() to use non default arguments for call to ipset binary.
+// handleNonInteractive configures handle for non-interactive mode.
+func handleNonInteractive() OptFunc {
+	return func(h *Handle) error {
+		h.handleInteractive = false
+		return nil
+	}
+}
+
+// HandleWithArgs is an options for New() to use non default arguments for call to ipset binary.
 // TODO rename HandleArgs
-func SetArgs(args ...string) OptFunc {
+func HandleWithArgs(args ...string) OptFunc {
 	return func(h *Handle) error {
 		h.args = args
 		return nil
 	}
 }
 
+// HandleAppendArgs is an options for New() to use non default arguments for call to ipset binary.
+// TODO rename HandleArgs
+func HandleAppendArgs(args ...string) OptFunc {
+	return func(h *Handle) error {
+		h.args = append(h.args, args...)
+		return nil
+	}
+}
+
 // Load ipset config from system.
 func Load(options ...OptFunc) (*Ipset, error) {
-	options = append(options, SetArgs("save", "-o", "xml"))
+	options = append(options, HandleWithArgs("save", "-o", "xml"))
 	handle, err := New(options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create ipset handler")
@@ -322,3 +414,7 @@ func Delete(cmd exec.Cmd, ipsets Ipsets, options []string) error {
 	return nil
 }
 */
+
+func renderSet2args(iset *Ipset, rType RenderType) []string {
+	return strings.Split(strings.TrimSpace(iset.Render(rType)), " ")
+}

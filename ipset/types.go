@@ -1,5 +1,7 @@
 package ipset
 
+import "fmt"
+
 type Ipset struct {
 	Sets []*Set `xml:" ipset,omitempty" json:"ipset,omitempty"`
 }
@@ -16,13 +18,27 @@ func (s *Ipset) SetByName(name string) *Set {
 func (s *Ipset) Render(rType RenderType) string {
 	var result string
 
-	if len(s.Sets) == 0 {
-		switch rType {
-		case RenderFlush:
+	switch rType {
+	case RenderFlush:
+		if len(s.Sets) == 0 {
 			return "flush\n"
-		case RenderDestroy:
+		}
+	case RenderDestroy:
+		if len(s.Sets) == 0 {
 			return "destroy\n"
 		}
+
+	// RenderSwap will fail when Sets < 2,
+	// it's a duty of a caller to ensure
+	// correctness.
+	case RenderSwap:
+		return fmt.Sprintf("swap %s %s", s.Sets[0].Name, s.Sets[1].Name)
+
+	// RenderRename will fail when Sets < 2,
+	// it's a duty of a caller to ensure
+	// correctness.
+	case RenderRename:
+		return fmt.Sprintf("rename %s %s", s.Sets[0].Name, s.Sets[1].Name)
 	}
 
 	for _, set := range s.Sets {
@@ -53,4 +69,13 @@ const (
 
 	// Render all sets for destroy.
 	RenderDestroy
+
+	// Render set for swap
+	RenderSwap
+
+	// Render set for test
+	RenderTest
+
+	// Render set for rename
+	RenderRename
 )

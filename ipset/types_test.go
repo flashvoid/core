@@ -15,6 +15,22 @@ func TestRender(t *testing.T) {
 		expect string
 	}{
 		{
+			name: "Render set and member for test",
+			sets: Ipset{Sets: []*Set{
+				&Set{Name: "super", Type: SetHashNet, Members: []Member{Member{Elem: "foo"}}},
+			}},
+			rType:  RenderTest,
+			expect: "test super foo",
+		},
+		{
+			name: "Render set  for test",
+			sets: Ipset{Sets: []*Set{
+				&Set{Name: "super", Type: SetHashNet},
+			}},
+			rType:  RenderTest,
+			expect: "test super",
+		},
+		{
 			name: "Render set and members",
 			sets: Ipset{Sets: []*Set{
 				&Set{Name: "super", Type: SetHashNet, Members: []Member{Member{Elem: "foo"}, Member{Elem: "bar"}}},

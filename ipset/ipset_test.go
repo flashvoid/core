@@ -19,8 +19,8 @@ func TestNew(t *testing.T) {
 		{
 			name: "create new set",
 			options: []OptFunc{
-				SetBin("/test"),
-				SetArgs("save"),
+				HandleWithBin("/test"),
+				HandleWithArgs("save"),
 			},
 			expect: func(h *Handle) bool { return h.ipsetBin == "/test" && h.args[0] == "save" },
 		},

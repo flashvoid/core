@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -19,6 +20,8 @@ func main() {
 	flagSet2 := flag.String("set2", "", "")
 	flagType := flag.String("type", "", "")
 	flagMember := flag.String("member", "", "")
+	flagLoad := flag.Bool("load", false, "")
+	flagInteractive := flag.Bool("i", false, "")
 	flag.Parse()
 
 	if *flagFile != "" {
@@ -38,80 +41,161 @@ func main() {
 		os.Exit(0)
 	}
 
-	sets, err := ipset.Load()
-	if err != nil {
-		panic(err)
+	if *flagLoad {
+		sets, err := ipset.Load()
+		if err != nil {
+			panic(err)
+		}
+
+		spew.Dump(sets)
+
+		os.Exit(0)
 	}
 
-	spew.Dump(sets)
+	var handle ipset.Handle
 
-	handle, err := ipset.New()
-	if err != nil {
-		panic(err)
+	if *flagInteractive {
+		handle, err := ipset.New()
+		if err != nil {
+			panic(err)
+		}
+
+		err = handle.Start()
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	err = handle.Start()
-	if err != nil {
-		panic(err)
-	}
-
+	var err error
 	switch *flagCmd {
 	case "add":
-		err = handle.Add(&ipset.Set{Name: *flagSet1, Members: []ipset.Member{ipset.Member{Elem: *flagMember}}})
+		set := &ipset.Set{Name: *flagSet1, Members: []ipset.Member{ipset.Member{Elem: *flagMember}}}
+		if *flagInteractive {
+			err = handle.Add(set)
+			if err != nil {
+				panic(err)
+			}
+			break
+
+		}
+		out, err := ipset.Add(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
 
 	case "del":
-		err = handle.Delete(&ipset.Set{Name: *flagSet1, Members: []ipset.Member{ipset.Member{Elem: *flagMember}}})
+		set := &ipset.Set{Name: *flagSet1, Members: []ipset.Member{ipset.Member{Elem: *flagMember}}}
+		if *flagInteractive {
+			err = handle.Delete(set)
+			if err != nil {
+				panic(err)
+			}
+			break
+
+		}
+		out, err := ipset.Delete(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
 	case "create":
-		err = handle.Create(&ipset.Set{Name: *flagSet1, Type: ipset.SetType(*flagType)})
+		set := &ipset.Set{Name: *flagSet1, Type: ipset.SetType(*flagType)}
+		if *flagInteractive {
+			err = handle.Create(set)
+			if err != nil {
+				panic(err)
+			}
+			break
+
+		}
+		out, err := ipset.Create(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
+	case "test":
+		set := &ipset.Set{Name: *flagSet1, Members: []ipset.Member{ipset.Member{Elem: *flagMember}}}
+		out, err := ipset.Test(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
+		if err != nil {
+			panic(err)
+		}
+
 	case "destroy":
-		err = handle.Destroy(&ipset.Set{Name: *flagSet1})
+		set := &ipset.Set{Name: *flagSet1}
+		if *flagInteractive {
+			err = handle.Destroy(set)
+			if err != nil {
+				panic(err)
+			}
+			break
+
+		}
+		out, err := ipset.Destroy(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
 	case "flush":
-		err = handle.Flush(&ipset.Set{Name: *flagSet1})
+		set := &ipset.Set{Name: *flagSet1}
+		if *flagInteractive {
+			err = handle.Flush(set)
+			if err != nil {
+				panic(err)
+			}
+			break
+
+		}
+		out, err := ipset.Flush(set)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
 	case "swap":
-		set1 := sets.SetByName(*flagSet1)
-		set2 := sets.SetByName(*flagSet2)
+		set1 := &ipset.Set{Name: *flagSet1}
+		set2 := &ipset.Set{Name: *flagSet2}
+		if *flagInteractive {
+			err = handle.Swap(set1, set2)
+			if err != nil {
+				panic(err)
+			}
+			break
+		}
 
-		err = handle.Swap(set1, set2)
+		out, err := ipset.Swap(set1, set2)
+		fmt.Printf("CombinedOutput: %s\n", out)
 		if err != nil {
 			panic(err)
 		}
+
+	case "rename":
+		set1 := &ipset.Set{Name: *flagSet1}
+		set2 := &ipset.Set{Name: *flagSet2}
+
+		out, err := ipset.Rename(set1, set2)
+		fmt.Printf("CombinedOutput: %s\n", out)
+		if err != nil {
+			panic(err)
+		}
+
 	default:
 		panic("Unknown command")
 	}
 
-	err = handle.Quit()
-	if err != nil {
-		panic(err)
-	}
+	if *flagInteractive {
+		err = handle.Quit()
+		if err != nil {
+			panic(err)
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-	err = handle.Wait(ctx)
-	if err != nil {
-		panic(err)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		err = handle.Wait(ctx)
+		if err != nil {
+			panic(err)
+		}
 	}
-
-	sets, err = ipset.Load()
-	if err != nil {
-		panic(err)
-	}
-
-	spew.Dump(sets)
 
 	return
 }

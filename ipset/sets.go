@@ -35,6 +35,10 @@ func NewSet(name string, sType SetType, options ...SetOpt) (*Set, error) {
 func (s *Set) Render(rType RenderType) string {
 	var result string
 
+	if s == nil {
+		return result
+	}
+
 	switch rType {
 	// only create set
 	case RenderCreate:
@@ -54,6 +58,12 @@ func (s *Set) Render(rType RenderType) string {
 	case RenderDelete:
 		for _, member := range s.Members {
 			result += fmt.Sprintf("del %s %s\n", s.Name, member.Render())
+		}
+	// only set name for test
+	case RenderTest:
+		result += fmt.Sprintf("test %s", s.Name)
+		if len(s.Members) == 1 {
+			result += fmt.Sprintf(" %s", s.Members[0].Elem)
 		}
 	// only flush set
 	case RenderFlush:
