@@ -25,6 +25,9 @@
 // Since ipset can export it's configuration as xml this package provides structures to
 // ipset xml structures and constructors for these structures.
 //
+// Logging: this package is mostly silent to avoid messing with ipset stderr
+// but some debug loggin can be enabled using RLOG_TRACE_LEVEL=3 environment variable.
+//
 // Typical session starts as
 //
 //	iset, _ := ipset.Load()

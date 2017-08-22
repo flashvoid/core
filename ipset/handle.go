@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/romana/rlog"
 )
 
 // Handle for interactive ipset session,
@@ -74,7 +75,7 @@ func NewHandle(options ...OptFunc) (*Handle, error) {
 	for _, opt := range options {
 		err = opt(&h)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create handle")
 		}
 
 	}
@@ -90,6 +91,7 @@ func NewHandle(options ...OptFunc) (*Handle, error) {
 		h.stderr, err = h.cmd.StderrPipe()
 		h.stdout, err = h.cmd.StdoutPipe()
 	}
+	rlog.Tracef(3, "creating handle for %s %s, interactive=%t", h.ipsetBin, h.args, h.handleInteractive)
 
 	return &h, err
 }
@@ -103,7 +105,7 @@ func (h *Handle) Start() error {
 // Wait for handle to stop interactive session and deallocate resources.
 func (h *Handle) Wait(ctx context.Context) error {
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	// users should call Quit() before calling Wait()
@@ -116,13 +118,10 @@ func (h *Handle) Wait(ctx context.Context) error {
 		close(success)
 	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-success:
-			return nil
-		}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-success:
 	}
 
 	return nil
@@ -131,7 +130,7 @@ func (h *Handle) Wait(ctx context.Context) error {
 // Write into the open handle.
 func (h *Handle) Write(p []byte) (int, error) {
 	if !h.isOpen(h) {
-		return 0, errors.New("Process not started ")
+		return 0, ErrorNotStarted
 	}
 
 	return h.stdin.Write(p)
@@ -140,7 +139,7 @@ func (h *Handle) Write(p []byte) (int, error) {
 // Read from the open handle.
 func (h *Handle) Read(p []byte) (int, error) {
 	if !h.isOpen(h) {
-		return 0, errors.New("Process not started ")
+		return 0, ErrorNotStarted
 	}
 
 	return h.stdout.Read(p)
@@ -149,7 +148,7 @@ func (h *Handle) Read(p []byte) (int, error) {
 // StdErr provides access to stderr of running process.
 func (h *Handle) StdErr() (io.Reader, error) {
 	if !h.isOpen(h) {
-		return nil, errors.New("Process not started ")
+		return nil, ErrorNotStarted
 	}
 
 	return h.stderr, nil
@@ -158,12 +157,12 @@ func (h *Handle) StdErr() (io.Reader, error) {
 // Quit interactive session.
 func (h *Handle) Quit() error {
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, "quit\n")
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to finish session")
 	}
 
 	return nil
@@ -177,12 +176,12 @@ func (h *Handle) Add(s renderer) error {
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, s.Render(RenderAdd))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to add members")
 	}
 
 	return nil
@@ -191,20 +190,20 @@ func (h *Handle) Add(s renderer) error {
 // Swap contents of 2 sets through the open handle.
 func (h *Handle) Swap(s1, s2 *Set) error {
 	if s1 == nil || s2 == nil {
-		return errors.New("swap() does not accept nil")
+		return ErrorUnexpectedNil
 	}
 
 	if s1.Type != s2.Type {
-		return errors.New(fmt.Sprintf("can not swap sets %s.%s <-> %s.%s due to different types", s1, s1.Type, s2, s2.Type))
+		return ErrorIncompatibleSwap
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, fmt.Sprintf("swap %s %s\n", s1.Name, s2.Name))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to swap sets")
 	}
 
 	return nil
@@ -217,12 +216,12 @@ func (h *Handle) Delete(s renderer) error {
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, s.Render(RenderDelete))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to delete members")
 	}
 
 	return nil
@@ -235,12 +234,12 @@ func (h *Handle) Create(s renderer) error {
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, s.Render(RenderCreate))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to create set")
 	}
 
 	return nil
@@ -254,12 +253,12 @@ func (h *Handle) Flush(s renderer) error {
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, s.Render(RenderFlush))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to flush set")
 	}
 
 	return nil
@@ -273,12 +272,12 @@ func (h *Handle) Destroy(s renderer) error {
 	}
 
 	if !h.isOpen(h) {
-		return errors.New("Process not started ")
+		return ErrorNotStarted
 	}
 
 	_, err := io.WriteString(h, s.Render(RenderDestroy))
 	if err != nil {
-		return errors.Wrap(err, "failed to write set")
+		return errors.Wrap(err, "failed to destroy set")
 	}
 
 	return nil
@@ -312,7 +311,7 @@ func Flush(set *Set, options ...OptFunc) ([]byte, error) {
 // Swap contents of 2 sets.
 func Swap(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
 	if set1 == nil || set2 == nil {
-		return nil, errors.New("must have exactly 2 non nil sets for swap")
+		return nil, ErrorUnexpectedNil
 	}
 	return oneshot(set1, set2, RenderSwap, options...)
 }
@@ -320,7 +319,7 @@ func Swap(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
 // Rename set.
 func Rename(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
 	if set1 == nil || set2 == nil {
-		return nil, errors.New("must have exactly 2 non nil sets for rename")
+		return nil, ErrorUnexpectedNil
 	}
 	return oneshot(set1, set2, RenderRename, options...)
 }
@@ -360,12 +359,7 @@ func Version(options ...OptFunc) (*IpsetVersion, error) {
 	return &IpsetVersion{Util: verUtil, Proto: verProto}, nil
 }
 
-const (
-	SupportedVersionUtil float64 = 6.29
-	SupportVersionProto          = 6
-)
-
-// Version prepresents ipset version.
+// IpsetVersion prepresents ipset version.
 type IpsetVersion struct {
 	Util  float64
 	Proto int
@@ -379,7 +373,7 @@ func (v *IpsetVersion) Check() bool {
 	return v.Util >= SupportedVersionUtil && v.Proto >= SupportVersionProto
 }
 
-// Tests existanse of a set or existance of memeber in a set.
+// Test tests existanse of a set or existance of memeber in a set.
 func Test(set1 *Set, options ...OptFunc) ([]byte, error) {
 	return oneshot(set1, nil, RenderTest, options...)
 }
@@ -402,11 +396,12 @@ func oneshot(set1, set2 *Set, rType RenderType, options ...OptFunc) ([]byte, err
 		return nil, err
 	}
 
-	fmt.Printf("DEBUG in oneshot, executing %s %s\n", handle.ipsetBin, handle.args)
+	rlog.Tracef(3, "executing %s %s", handle.ipsetBin, handle.args)
 
 	return handle.cmd.CombinedOutput()
 }
 
+// IsSuccessful returns true if process has exited with exit code=0.
 func (h *Handle) IsSuccessful() bool {
 	if h.cmd == nil || h.cmd.ProcessState == nil {
 		return false
@@ -453,7 +448,10 @@ func HandleAppendArgs(args ...string) OptFunc {
 
 // Load ipset config from system.
 func Load(options ...OptFunc) (*Ipset, error) {
+
+	// this will override any arguments passed down with options.
 	options = append(options, HandleWithArgs("save", "-o", "xml"))
+
 	handle, err := NewHandle(options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create ipset handler")
@@ -465,11 +463,12 @@ func Load(options ...OptFunc) (*Ipset, error) {
 	}
 
 	var ipset Ipset
-
 	err = xml.NewDecoder(handle.stdout).Decode(&ipset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse ipset config")
 	}
+
+	rlog.Tracef(3, "loaded %d sets from ipset", len(ipset.Sets))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -481,6 +480,8 @@ func Load(options ...OptFunc) (*Ipset, error) {
 
 // LoadFromFile loads ipset config form xml file produced with ipset save -o xml.
 func LoadFromFile(filename string) (*Ipset, error) {
+	rlog.Tracef(3, "loading ipset configuration form file %s", filename)
+
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load ipset config from file")
@@ -491,6 +492,8 @@ func LoadFromFile(filename string) (*Ipset, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load ipset config from file")
 	}
+
+	rlog.Tracef(3, "loaded %d sets from file", len(ipset.Sets))
 
 	return &ipset, nil
 }
@@ -523,3 +526,21 @@ func defaultStateFunc(h *Handle) bool {
 
 	return started && !exited
 }
+
+// Error represents errors.
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
+// Errors
+const (
+	ErrorNotStarted       Error = "Process not started"
+	ErrorUnexpectedNil    Error = "function does not accept nil"
+	ErrorIncompatibleSwap Error = "swaped sets must be of the same type"
+)
+
+// Minimal ipset version supported by this package.
+const (
+	SupportedVersionUtil float64 = 6.29
+	SupportVersionProto          = 6
+)

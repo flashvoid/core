@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/romana/rlog"
 )
 
 // Set represents ipset set.
@@ -38,7 +39,7 @@ func NewSet(name string, sType SetType, options ...SetOpt) (*Set, error) {
 	for _, opt := range options {
 		err := opt(&s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to create new set %s", name)
 		}
 	}
 
@@ -90,6 +91,7 @@ func (s *Set) Render(rType RenderType) string {
 	return result
 }
 
+// AddMember to the set.
 func (s *Set) AddMember(m *Member) error {
 	err := validateMemberForSet(s, m)
 	if err != nil {
@@ -100,21 +102,23 @@ func (s *Set) AddMember(m *Member) error {
 	return nil
 }
 
+// SetType represents type of ipset set.
 type SetType string
 
+// see http://ipset.netfilter.org/ipset.man.html for types description.
 const (
-	SetBitmapIp       = "bitmap:ip"
-	SetBitmapIpMac    = "bitmap:ip,mac"
+	SetBitmapIP       = "bitmap:ip"
+	SetBitmapIPMac    = "bitmap:ip,mac"
 	SetBitmapPort     = "bitmap:port"
-	SetHashIp         = "hash:ip"
+	SetHashIP         = "hash:ip"
 	SetHashMac        = "hash:mac"
 	SetHashNet        = "hash:net"
 	SetHashNetNet     = "hash:net,net"
-	SetHashIpPort     = "hash:ip,port"
+	SetHashIPPort     = "hash:ip,port"
 	SetHashNetPort    = "hash:net,port"
-	SetHashIpPortIp   = "hash:ip,port,ip"
-	SetHashIpPortNet  = "hash:ip,port,net"
-	SetHashIpMark     = "hash:ip,mark"
+	SetHashIPPortIP   = "hash:ip,port,ip"
+	SetHashIPPortNet  = "hash:ip,port,net"
+	SetHashIPMark     = "hash:ip,mark"
 	SetHashNetPortNet = "hash:net,port,net"
 	SetHashNetIface   = "hash:net,iface"
 	SetListSet        = "list:set"
@@ -142,6 +146,12 @@ func SetWithSize(size int) SetOpt {
 		return nil
 	}
 }
+
+// Acceptible values for SetWithFamily
+const (
+	MemberFamilyInet  = "inet"
+	MemberFamilyInet6 = "inet6"
+)
 
 // SetWithFamily is an option to create Set with family field initialized.
 func SetWithFamily(family string) SetOpt {
@@ -271,6 +281,8 @@ func validateMemberForSet(s *Set, m *Member) error {
 		return nil
 	}
 
+	rlog.Tracef(3, "validating member %v against set type %s", *m, s.Type)
+
 	if s.Header.Comment == nil && m.Comment != "" {
 		return errors.New("comment options used with incompatible set")
 	}
@@ -299,24 +311,26 @@ func validateMemberForSet(s *Set, m *Member) error {
 		return errors.New("skbqueue options used with incompatible set")
 	}
 
+	rlog.Tracef(3, "validating member %v successful")
+
 	return nil
 }
 
 func validateSetHeader(sType SetType, header Header) error {
-	/*
-		{ "Family","family", `!= ""` },
-		{ "Range","range", `!= ""` },
-		{ "Hashsize","hashsize", "!= 0" },
-		{ "Maxelem","maxelem", "!= 0" },
-		{ "Memsize","memsize", "!= 0" },
-		{ "References","references", "!= 0" },
-		{ "Timeout","timeout", "!= 0" },
-		{ "Netmask","netmask", "!= 0" },
-		{ "Size","size", "!= 0" },
-		{ "Counters","counters", "!= nil" },
-		{ "Comment","comment", "!= nil" },
-		{ "SKBInfo","skbinfo", "!= nil" },
-		{ "Forceadd","forceadd", "!= nil" },
+	/* ignore this
+	{ "Family","family", `!= ""` },
+	{ "Range","range", `!= ""` },
+	{ "Hashsize","hashsize", "!= 0" },
+	{ "Maxelem","maxelem", "!= 0" },
+	{ "Memsize","memsize", "!= 0" },
+	{ "References","references", "!= 0" },
+	{ "Timeout","timeout", "!= 0" },
+	{ "Netmask","netmask", "!= 0" },
+	{ "Size","size", "!= 0" },
+	{ "Counters","counters", "!= nil" },
+	{ "Comment","comment", "!= nil" },
+	{ "SKBInfo","skbinfo", "!= nil" },
+	{ "Forceadd","forceadd", "!= nil" },
 	*/
 
 	compatList, ok := headerValidationMap[sType]
@@ -413,18 +427,18 @@ func validateSetHeader(sType SetType, header Header) error {
 
 var (
 	headerValidationMap = map[SetType]string{
-		SetBitmapIp:       "-range-netmask-timeout-counters-comment-skbinfo-",
-		SetBitmapIpMac:    "-range-timeout-counters-comment-skbinfo-",
+		SetBitmapIP:       "-range-netmask-timeout-counters-comment-skbinfo-",
+		SetBitmapIPMac:    "-range-timeout-counters-comment-skbinfo-",
 		SetBitmapPort:     "-range-timeout-counters-comment-skbinfo-",
-		SetHashIp:         "-family-hashsize-maxelem-netmask-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIP:         "-family-hashsize-maxelem-netmask-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashMac:        "-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashNet:        "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashNetNet:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
-		SetHashIpPort:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIPPort:     "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashNetPort:    "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
-		SetHashIpPortIp:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
-		SetHashIpPortNet:  "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
-		SetHashIpMark:     "-family-markmask-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIPPortIP:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIPPortNet:  "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
+		SetHashIPMark:     "-family-markmask-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashNetPortNet: "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetHashNetIface:   "-family-hashsize-maxelem-timeout-counters-comment-skbinfo-forceadd-",
 		SetListSet:        "-size-timeout-counters-comment-skbinfo-",

@@ -17,6 +17,8 @@ package ipset
 
 import (
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func TestNewMember(t *testing.T) {
@@ -28,11 +30,13 @@ func TestNewMember(t *testing.T) {
 		expect func(*Member, error) bool
 	}{
 		{
-			name:   "error when set doesn't allow comments",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{MemberWithComment("test")},
-			expect: func(m *Member, e error) bool { return e.Error() == "comment options used with incompatible set" },
+			name: "error when set doesn't allow comments",
+			set:  Set{Name: "super", Type: SetHashNet, Header: Header{}},
+			elem: "foo",
+			args: []MemberOpt{MemberWithComment("test")},
+			expect: func(m *Member, e error) bool {
+				return errors.Cause(e).Error() == "comment options used with incompatible set"
+			},
 		},
 		{
 			name:   "set allows comments",
@@ -42,11 +46,13 @@ func TestNewMember(t *testing.T) {
 			expect: func(m *Member, e error) bool { return m.Comment == "test" && e == nil },
 		},
 		{
-			name:   "error when set doesn't allow timeouts",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{MemberWithTimeout(10)},
-			expect: func(m *Member, e error) bool { return e.Error() == "timeout options used with incompatible set" },
+			name: "error when set doesn't allow timeouts",
+			set:  Set{Name: "super", Type: SetHashNet, Header: Header{}},
+			elem: "foo",
+			args: []MemberOpt{MemberWithTimeout(10)},
+			expect: func(m *Member, e error) bool {
+				return errors.Cause(e).Error() == "timeout options used with incompatible set"
+			},
 		},
 		{
 			name:   "set allows timeouts",
@@ -56,11 +62,13 @@ func TestNewMember(t *testing.T) {
 			expect: func(m *Member, e error) bool { return m.Timeout == 10 && e == nil },
 		},
 		{
-			name:   "error when set doesn't allow counters",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{MemberWithBytes(10), MemberWithPackets(2)},
-			expect: func(m *Member, e error) bool { return e.Error() == "bytes options used with incompatible set" },
+			name: "error when set doesn't allow counters",
+			set:  Set{Name: "super", Type: SetHashNet, Header: Header{}},
+			elem: "foo",
+			args: []MemberOpt{MemberWithBytes(10), MemberWithPackets(2)},
+			expect: func(m *Member, e error) bool {
+				return errors.Cause(e).Error() == "bytes options used with incompatible set"
+			},
 		},
 		{
 			name:   "set allows counters",
@@ -70,11 +78,13 @@ func TestNewMember(t *testing.T) {
 			expect: func(m *Member, e error) bool { return m.Bytes == 10 && e == nil },
 		},
 		{
-			name:   "error when set doesn't allow skbinfo",
-			set:    Set{Name: "super", Type: SetHashNet, Header: Header{}},
-			elem:   "foo",
-			args:   []MemberOpt{MemberWithSKBPrio("10")},
-			expect: func(m *Member, e error) bool { return e.Error() == "skbprio options used with incompatible set" },
+			name: "error when set doesn't allow skbinfo",
+			set:  Set{Name: "super", Type: SetHashNet, Header: Header{}},
+			elem: "foo",
+			args: []MemberOpt{MemberWithSKBPrio("10")},
+			expect: func(m *Member, e error) bool {
+				return errors.Cause(e).Error() == "skbprio options used with incompatible set"
+			},
 		},
 		{
 			name:   "set allows skbinfo",

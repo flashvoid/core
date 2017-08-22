@@ -46,7 +46,7 @@ func NewMember(elem string, set *Set, opts ...MemberOpt) (*Member, error) {
 	for _, opt := range opts {
 		err := opt(&m)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to create set member %s", elem)
 		}
 	}
 
@@ -168,8 +168,3 @@ func (m Member) render() string {
 
 	return result
 }
-
-const (
-	MemberFamilyInet  = "inet"
-	MemberFamilyInet6 = "inet6"
-)

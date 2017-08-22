@@ -15,7 +15,11 @@
 
 package ipset
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/romana/rlog"
+)
 
 // Ipset represents ipset configuration that consists of list of sets.
 type Ipset struct {
@@ -57,6 +61,7 @@ func (s *Ipset) Render(rType RenderType) string {
 	return result
 }
 
+// RenderType indicates how to render a Set.
 type RenderType int
 
 const (
@@ -92,10 +97,14 @@ const (
 
 // SetByName searches set by names.
 func (s *Ipset) SetByName(name string) *Set {
+	rlog.Tracef(3, "looking for a set %s", name)
+
 	for i, set := range s.Sets {
 		if set.Name == name {
+			rlog.Tracef(3, "set found %v", set)
 			return s.Sets[i]
 		}
 	}
+
 	return nil
 }
