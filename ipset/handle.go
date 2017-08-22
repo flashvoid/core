@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -136,6 +137,24 @@ func (h *Handle) Write(p []byte) (int, error) {
 	return h.stdin.Write(p)
 }
 
+// Read from the open handle.
+func (h *Handle) Read(p []byte) (int, error) {
+	if !h.isOpen(h) {
+		return 0, errors.New("Process not started ")
+	}
+
+	return h.stdout.Read(p)
+}
+
+// StdErr provides access to stderr of running process.
+func (h *Handle) StdErr() (io.Reader, error) {
+	if !h.isOpen(h) {
+		return nil, errors.New("Process not started ")
+	}
+
+	return h.stderr, nil
+}
+
 // Quit interactive session.
 func (h *Handle) Quit() error {
 	if !h.isOpen(h) {
@@ -169,7 +188,7 @@ func (h *Handle) Add(s renderer) error {
 	return nil
 }
 
-// Swap contents of 2 sets. // TODO
+// Swap contents of 2 sets through the open handle.
 func (h *Handle) Swap(s1, s2 *Set) error {
 	if s1 == nil || s2 == nil {
 		return errors.New("swap() does not accept nil")
@@ -265,11 +284,6 @@ func (h *Handle) Destroy(s renderer) error {
 	return nil
 }
 
-// TODO return ok is version is compatible and version string.
-func IpsetVersion(options ...OptFunc) (bool, string) {
-	return true, ""
-}
-
 // Add members of sets to ipset.
 func Add(set *Set, options ...OptFunc) ([]byte, error) {
 	return oneshot(set, nil, RenderAdd, options...)
@@ -309,6 +323,60 @@ func Rename(set1, set2 *Set, options ...OptFunc) ([]byte, error) {
 		return nil, errors.New("must have exactly 2 non nil sets for rename")
 	}
 	return oneshot(set1, set2, RenderRename, options...)
+}
+
+// Version captures version of ipset and parses it for later verification.
+func Version(options ...OptFunc) (*IpsetVersion, error) {
+	options = append(options, HandleWithArgs("version"), handleNonInteractive())
+
+	handle, err := NewHandle(options...)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := handle.cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	sdata := strings.TrimSpace(string(data))
+	sdata = strings.Replace(sdata, "v", "", -1)
+	sdata = strings.Replace(sdata, ",", "", -1)
+	temp := strings.Split(sdata, " ")
+	if len(temp) < 2 {
+		return nil, errors.Errorf("can not parse %s as a version string", string(data))
+	}
+
+	verUtil, err := strconv.ParseFloat(temp[1], 0)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can not parse %s as a version string", string(data))
+	}
+
+	verProto, err := strconv.Atoi(temp[len(temp)-1])
+	if err != nil {
+		return nil, errors.Wrapf(err, "can not parse %s as a version string", string(data))
+	}
+
+	return &IpsetVersion{Util: verUtil, Proto: verProto}, nil
+}
+
+const (
+	SupportedVersionUtil float64 = 6.29
+	SupportVersionProto          = 6
+)
+
+// Version prepresents ipset version.
+type IpsetVersion struct {
+	Util  float64
+	Proto int
+}
+
+// Check that given version is supported.
+func (v *IpsetVersion) Check() bool {
+	if v == nil {
+		return false
+	}
+	return v.Util >= SupportedVersionUtil && v.Proto >= SupportVersionProto
 }
 
 // Tests existanse of a set or existance of memeber in a set.
