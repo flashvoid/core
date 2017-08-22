@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/romana/core/ipset"
+	"github.com/romana/core/agent/simple/internal/ipset"
 )
 
 func main() {
