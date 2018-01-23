@@ -162,7 +162,3 @@ func ParseExpression(expression string) (Expression, error) {
 
 	return result, nil
 }
-
-func match(labels map[string]string, expression string) bool {
-	return true
-}
