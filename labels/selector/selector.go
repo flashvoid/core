@@ -1,4 +1,4 @@
-package selector
+package expression
 
 import (
 	"strings"
@@ -136,6 +136,16 @@ func DetectSimpleExpressionType(expression string) (ExpressionType, error) {
 }
 
 type Expression []SimpleExpression
+
+func (e Expression) Eval(labels map[string]string) bool {
+	for _, exp := range e {
+		if !exp.testLabels(labels) {
+			return false
+		}
+	}
+
+	return true
+}
 
 func ParseExpression(expression string) (Expression, error) {
 	var result Expression

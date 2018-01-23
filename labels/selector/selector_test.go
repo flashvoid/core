@@ -1,4 +1,4 @@
-package selector
+package expression
 
 import "testing"
 
@@ -192,6 +192,81 @@ func TestTestLabels(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			res := tc.expression.testLabels(tc.labels)
+			if res != tc.expected {
+				t.Errorf("%s got wrong result %t != %t", tc.name, res, tc.expected)
+			}
+		})
+	}
+}
+
+func TestEval(t *testing.T) {
+	cases := []struct {
+		name       string
+		expression string
+		labels     map[string]string
+		expected   bool
+	}{
+		{
+			"ev1",
+			"a==b",
+			map[string]string{
+				"a": "b",
+			},
+			true,
+		},
+		{
+			"ev2",
+			"a==b,c!=d",
+			map[string]string{
+				"a": "b",
+			},
+			true,
+		},
+		{
+			"ev3",
+			"a==b,c!=d",
+			map[string]string{
+				"a": "b",
+				"c": "b",
+			},
+			true,
+		},
+		{
+			"ev4",
+			"a==b,c!=d",
+			map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+			false,
+		},
+		{
+			"ev5",
+			"c!=d",
+			map[string]string{},
+			true,
+		},
+		{
+			"ev6",
+			"c!=d,a=1,b==2",
+			map[string]string{
+				"a": "1",
+				"b": "2",
+				"c": "3",
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expression, err := ParseExpression(tc.expression)
+			if err != nil {
+				t.Errorf("failed to parse an expression %s", tc.expression)
+				return
+			}
+
+			res := expression.Eval(tc.labels)
 			if res != tc.expected {
 				t.Errorf("%s got wrong result %t != %t", tc.name, res, tc.expected)
 			}
