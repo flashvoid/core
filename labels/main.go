@@ -349,7 +349,7 @@ func TopologySync(ctx context.Context,
 
 						// pod labels updated
 						// attempting to store the updated version in database
-						err := storeEndopint(romanaClient, podState)
+						err := storeEndpoint(romanaClient, podState)
 						if err != nil {
 							log.Errorf("failed to store endpoint %v, err=%s",
 								podState, err)
@@ -408,7 +408,7 @@ func TopologySync(ctx context.Context,
 						continue
 					}
 
-					err := storeEndopint(romanaClient, endpoint)
+					err := storeEndpoint(romanaClient, endpoint)
 					if err != nil {
 						log.Errorf("failed to store endpoint %v, err=%s", endpoint, err)
 						continue
@@ -432,8 +432,8 @@ func TopologySync(ctx context.Context,
 	}()
 }
 
-// storeEndopint is awrapper that stores endpoint into a database
-func storeEndopint(romanaClient *client.Client, endpoint types.Endpoint) error {
+// storeEndpoint is awrapper that stores endpoint into a database
+func storeEndpoint(romanaClient *client.Client, endpoint types.Endpoint) error {
 	data, err := json.Marshal(endpoint)
 	if err != nil {
 		return err
