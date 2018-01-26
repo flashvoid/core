@@ -157,13 +157,19 @@ const TranslateGroupStartIndex = 0
 // translateTarget analizes kubePolicy and fills romanaPolicy.AppliedTo field.
 func (tg *TranslateGroup) translateTarget(translator *Translator) error {
 
+	// policy target can be in either of 3 possible configurations
+	// - nil or empty - policy target selects entire namespace
+	// - MatchLabels[segmentLabelName] - policy target selects romana segment
+	// - MatchLabels with other labels - policy target selects endpoints by labels
+
 	var targetEndpoint api.Endpoint
 
 	// Translate kubernetes namespace into romana tenant. Must be defined.
 	tenantID := GetTenantIDFromNamespaceName(tg.kubePolicy.ObjectMeta.Namespace)
 	targetEndpoint.TenantID = tenantID
 
-	// Empty PodSelector means policy applied to the entire namespace.
+	// PodSelector can be in either of 3 states
+	// Pod selector is empty, selecting entire namespace
 	if len(tg.kubePolicy.Spec.PodSelector.MatchLabels) == 0 {
 		tg.romanaPolicy.AppliedTo = []api.Endpoint{targetEndpoint}
 
@@ -171,16 +177,18 @@ func (tg *TranslateGroup) translateTarget(translator *Translator) error {
 		return nil
 	}
 
-	// If PodSelector not specified assume tenant wide policy.
+	// If PodSelector doesn't specify a segment assume it's a labels based selector
 	kubeSegmentID, ok := tg.kubePolicy.Spec.PodSelector.MatchLabels[translator.segmentLabelName]
 	if !ok || kubeSegmentID == "" {
+		targetEndpoint.Labels = tg.kubePolicy.Spec.PodSelector.MatchLabels
+
 		tg.romanaPolicy.AppliedTo = []api.Endpoint{targetEndpoint}
 		log.Tracef(trace.Inside, "Segment was not specified in policy %v, assuming target is a namespace", tg.kubePolicy)
 		return nil
 	}
 
+	// PodSelector specifies romana segment, creating segment based target
 	targetEndpoint.SegmentID = kubeSegmentID
-
 	tg.romanaPolicy.AppliedTo = []api.Endpoint{targetEndpoint}
 
 	return nil
@@ -212,7 +220,10 @@ func (tg *TranslateGroup) makeNextIngressPeer(translator *Translator) error {
 			sourceEndpoint.TenantID = GetTenantIDFromNamespaceName(tg.kubePolicy.ObjectMeta.Namespace)
 		}
 
-		// This ingress field matches a either one segment or all segments.
+		// podSelector can be in either of 3 configurations
+		// nil - selects all the traffic within namespaces
+		// matchLabels[segmentLabel] - selects romana segment, other labels ignored
+		// matchLabels[otherLabels] - selects endpoints by their labels within namespace
 		if fromEntry.PodSelector != nil {
 
 			// Get segment name from podSelector.
@@ -220,7 +231,16 @@ func (tg *TranslateGroup) makeNextIngressPeer(translator *Translator) error {
 			if ok {
 				// Register source tenant/segment as a romana Peer.
 				sourceEndpoint.SegmentID = kubeSegmentID
+			} else {
+
+				// copy labels from podSelector into romana source endpoint
+				copyLabels := make(map[string]string)
+				for k, v := range fromEntry.PodSelector.MatchLabels {
+					copyLabels[k] = v
+				}
+				sourceEndpoint.Labels = copyLabels
 			}
+
 		}
 
 		tg.romanaPolicy.Ingress[tg.ingressIndex].Peers = append(tg.romanaPolicy.Ingress[tg.ingressIndex].Peers, sourceEndpoint)
