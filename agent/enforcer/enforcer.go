@@ -30,7 +30,7 @@ import (
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/log/trace"
 	"github.com/romana/core/labels/controller"
-	"github.com/romana/core/labels/selector"
+	"github.com/romana/core/labels/expression"
 	"github.com/romana/core/labels/types"
 	"github.com/romana/core/pkg/policytools"
 
