@@ -1,6 +1,7 @@
 package expression
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -145,6 +146,19 @@ func (e Expression) Eval(labels map[string]string) bool {
 	}
 
 	return true
+}
+
+func ExpressionFromMap(labels map[string]string) Expression {
+	var result Expression
+
+	for k, v := range labels {
+		result = append(result, SimpleExpression{
+			Type: Eq,
+			Body: fmt.Sprintf("%s=%s", k, v),
+		})
+	}
+
+	return result
 }
 
 func ParseExpression(expression string) (Expression, error) {
