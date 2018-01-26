@@ -27,6 +27,7 @@ import (
 	log "github.com/romana/rlog"
 )
 
+// Store maintains in memory collection of all Endpoint objects.
 type Store interface {
 	Put(string, types.Endpoint)
 	Get(string) (types.Endpoint, bool)
@@ -35,10 +36,12 @@ type Store interface {
 	Keys() []string
 }
 
+// EndpointStorage implements Store.
 type EndpointStorage struct {
 	store cache.Interface
 }
 
+// NewEndpointStorage creates new Store.
 func NewEndpointStorage() Store {
 	return &EndpointStorage{cache.New()}
 }
@@ -82,6 +85,7 @@ func (p *EndpointStorage) Delete(key string) {
 	p.store.Delete(key)
 }
 
+// EndpointController monitors Romana database for Endpoint changes and maintains up to date Store.
 func EndpointController(ctx context.Context, romanaClient *client.Client, key string) (Store, chan types.EndpointEvent, error) {
 	var err error
 	out := make(chan types.EndpointEvent)

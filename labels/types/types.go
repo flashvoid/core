@@ -23,6 +23,7 @@ type EndpointEvent struct {
 }
 
 // Endpoint represents IP address and associated attributes.
+// TODO json tags
 type Endpoint struct {
 	Kind    string
 	Name    string

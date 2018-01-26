@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Represents operation in Expression.
 type ExpressionType string
 
 const (
@@ -30,11 +31,13 @@ const (
 	Unknown ExpressionType = "unknown"
 )
 
+// SimpleExpression represents expression with exactly one operator.
 type SimpleExpression struct {
 	Type ExpressionType
 	Body string
 }
 
+// Key returns key of an expression (or first operand).
 func (e SimpleExpression) Key() string {
 	var key string
 	var idx int
@@ -55,6 +58,7 @@ func (e SimpleExpression) Key() string {
 	return key
 }
 
+// Value return value of an expression (of second operand).
 func (e SimpleExpression) Value() string {
 	var key string
 	var idx int
@@ -90,6 +94,7 @@ func (e SimpleExpression) Value() string {
 	return key
 }
 
+// testLabels evaluates simple expression against collection of labels.
 func (e SimpleExpression) testLabels(labels map[string]string) bool {
 	switch e.Type {
 	case Eq:
@@ -117,6 +122,7 @@ func (e SimpleExpression) testLabels(labels map[string]string) bool {
 	return false
 }
 
+// DetectSimpleExpressionType returns type of simple expression.
 func DetectSimpleExpressionType(expression string) (ExpressionType, error) {
 	if strings.Contains(expression, ",") {
 		return Unknown, errors.New("simple expresstion is invalid, must not contain commas (,) - " + expression)
@@ -151,8 +157,11 @@ func DetectSimpleExpressionType(expression string) (ExpressionType, error) {
 	return Unknown, errors.New("failed to detect type of simple expression - " + expression)
 }
 
+// Expression is a label expression that is represented by collection of simple expressions.
 type Expression []SimpleExpression
 
+// Eval evaluates an Expression against collection of labels.
+// Expression is true if every simple expression is true (logical AND).
 func (e Expression) Eval(labels map[string]string) bool {
 	for _, exp := range e {
 		if !exp.testLabels(labels) {
@@ -163,6 +172,7 @@ func (e Expression) Eval(labels map[string]string) bool {
 	return true
 }
 
+// ExpressionFromMap generates an Expression from a collection of labels.
 func ExpressionFromMap(labels map[string]string) Expression {
 	var result Expression
 
@@ -176,6 +186,8 @@ func ExpressionFromMap(labels map[string]string) Expression {
 	return result
 }
 
+// ParseExpression generates an Expression from it's string representation.
+// e.g. "app=nginx,cluster!=qa" -> {{ "app", "eq", "nginx" },{ "cluster", "neq", "qa" }}
 func ParseExpression(expression string) (Expression, error) {
 	var result Expression
 

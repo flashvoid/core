@@ -453,19 +453,24 @@ func deleteEndpoint(romanaClient *client.Client, endpoint types.Endpoint) error 
 	return err
 }
 
+// schematic generates appropriate etcd key from object
+// TODO make it a separate package.
 type schematic struct {
 	Prefix string
 	Map    map[string]string
 }
 
+// NetworkKey makes an etcd key for Network object.
 func (s schematic) NetworkKey(network client.Network) string {
 	return fmt.Sprintf(s.Map["Network"], network.Name)
 }
 
+// BlockKey makes an etcd key for Block object.
 func (s schematic) BlockKey(network client.Network, block client.Block) string {
 	return fmt.Sprintf(s.Map["Block"], network.Name, block.CIDR.String())
 }
 
+// EndpointKey make an etcd key for Endpoint object.
 func (s schematic) EndpointKey(endpoint types.Endpoint) string {
 	cidr := strings.Replace(endpoint.Block, "/", "s", -1)
 	return fmt.Sprintf(s.Map["Endpoint"], endpoint.Network, cidr, endpoint.Name)
