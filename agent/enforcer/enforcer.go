@@ -18,6 +18,7 @@ package enforcer
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -28,6 +29,9 @@ import (
 	"github.com/romana/core/agent/policycache"
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/log/trace"
+	"github.com/romana/core/labels/controller"
+	"github.com/romana/core/labels/selector"
+	"github.com/romana/core/labels/types"
 	"github.com/romana/core/pkg/policytools"
 
 	"github.com/romana/ipset"
@@ -42,6 +46,11 @@ type Interface interface {
 
 // Endpoint implements Interface.
 type Enforcer struct {
+	endpointStore controller.Store
+
+	endpointChan <-chan types.EndpointEvent
+
+	endpointUpdate bool
 
 	// provides access to in memeory policy cache.
 	policyCache policycache.Interface
@@ -75,7 +84,9 @@ type Enforcer struct {
 }
 
 // New returns new policy enforcer.
-func New(policy policycache.Interface,
+func New(endpointStore controller.Store,
+	endpointChan <-chan types.EndpointEvent,
+	policy policycache.Interface,
 	policies <-chan api.Policy,
 	blocks api.IPAMBlocksResponse,
 	blocksChannel <-chan api.IPAMBlocksResponse,
@@ -94,6 +105,8 @@ func New(policy policycache.Interface,
 	}
 
 	return &Enforcer{
+		endpointStore:  endpointStore,
+		endpointChan:   endpointChan,
 		policyCache:    policy,
 		policies:       policies,
 		blocks:         blocks,
@@ -120,7 +133,7 @@ func (a *Enforcer) Run(ctx context.Context) {
 		for {
 			select {
 			case <-a.ticker.C:
-				if !a.policyUpdate && !a.blocksUpdate {
+				if !a.policyUpdate && !a.blocksUpdate && !a.endpointUpdate {
 					log.Tracef(5, "Policy enforcer tick skipped due no updates, block update=%t and policy update=%t", a.blocksUpdate, a.policyUpdate)
 					continue
 				}
@@ -131,7 +144,7 @@ func (a *Enforcer) Run(ctx context.Context) {
 				}
 				NumEnforcerTick.Inc()
 
-				sets, err := makeBlockSets(romanaBlocks, a.policyCache, a.hostname)
+				sets, err := makeBlockSets(romanaBlocks, a.policyCache, a.endpointStore, a.hostname)
 				if err != nil {
 					log.Errorf("Failed to update ipsets, can't apply Romana policies, %s", err)
 					ErrMakeSets.Inc()
@@ -164,6 +177,7 @@ func (a *Enforcer) Run(ctx context.Context) {
 
 				a.policyUpdate = false
 				a.blocksUpdate = false
+				a.endpointUpdate = false
 
 			case blocksList := <-a.blocksChannel:
 				log.Trace(4, "Policy enforcer receives update from cache blocks revision=%d",
@@ -175,6 +189,10 @@ func (a *Enforcer) Run(ctx context.Context) {
 				log.Trace(4, "Policy enforcer receives update from policy cache")
 				a.policyUpdate = true
 
+			case <-a.endpointChan:
+				log.Trace(4, "Endpoints update detected")
+				a.endpointUpdate = true
+
 			case <-ctx.Done():
 				log.Infof("Policy enforcer stopping")
 				a.ticker.Stop()
@@ -185,18 +203,23 @@ func (a *Enforcer) Run(ctx context.Context) {
 }
 
 // makeBlockSets creates ipset configuration for policies and blocks.
-func makeBlockSets(blocks []api.IPAMBlockResponse, policyCache policycache.Interface, hostname string) (*ipset.Ipset, error) {
+func makeBlockSets(blocks []api.IPAMBlockResponse, policyCache policycache.Interface, endpointStore controller.Store, hostname string) (*ipset.Ipset, error) {
 	policies := policyCache.List()
 	sets := ipset.NewIpset()
 
 	// for every policy produce a set to match policy related traffic.
 	for _, policy := range policies {
-		policySet, err := makePolicySets(policy)
+		policySetTarget, policySetPeer, err := makePolicySets(policy, endpointStore)
 		if err != nil {
 			return nil, err
 		}
 
-		err = sets.AddSet(policySet)
+		err = sets.AddSet(policySetTarget)
+		if err != nil {
+			return nil, err
+		}
+
+		err = sets.AddSet(policySetPeer)
 		if err != nil {
 			return nil, err
 		}
@@ -278,44 +301,102 @@ func makeBlockSets(blocks []api.IPAMBlockResponse, policyCache policycache.Inter
 // located on current host.
 const LocalBlockSetName = "localBlocks"
 
-// makePolicySets produces a set that matches traffic selected by policy Peer fields.
-func makePolicySets(policy api.Policy) (*ipset.Set, error) {
-	var policySet *ipset.Set
+// makePolicySets produces a set that matches traffic selected by policy Peer/AppliedTo fields.
+func makePolicySets(policy api.Policy, endpointStore controller.Store) (*ipset.Set, *ipset.Set, error) {
+	var policySetPeer, policySetTarget, policySetDst, policySetSrc *ipset.Set
 	var err error
 
-	switch policy.Direction {
-	case api.PolicyDirectionEgress:
-		policySet, err = ipset.NewSet(
-			policytools.MakeRomanaPolicyNameSetDst(policy), ipset.SetHashNet)
-	case api.PolicyDirectionIngress:
-		policySet, err = ipset.NewSet(
-			policytools.MakeRomanaPolicyNameSetSrc(policy), ipset.SetHashNet)
-	}
+	policySetDst, err = ipset.NewSet(
+		policytools.MakeRomanaPolicyNameSetDst(policy), ipset.SetHashNet)
+	policySetSrc, err = ipset.NewSet(
+		policytools.MakeRomanaPolicyNameSetSrc(policy), ipset.SetHashNet)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	// In Egress policy peer is our destination,
+	// in ingress policy peer is our source.
+	switch policy.Direction {
+	case api.PolicyDirectionEgress:
+		policySetPeer = policySetDst
+		policySetTarget = policySetSrc
+	case api.PolicyDirectionIngress:
+		policySetPeer = policySetSrc
+		policySetTarget = policySetDst
 	}
 
 	for _, ingress := range policy.Ingress {
 		for _, peer := range ingress.Peers {
+
+			// If peer has labels provided - find endpoints with corresponding
+			// labels in endpoint store and add these endpoint IPs to the set.
+			if len(peer.Labels) > 0 {
+				labelExpression := expression.ExpressionFromMap(peer.Labels)
+
+				for _, endpoint := range endpointStore.List() {
+					if labelExpression.Eval(endpoint.Labels) {
+						member, err := ipset.NewMember(
+							fmt.Sprintf("%s/32", endpoint.IP),
+							policySetPeer,
+						)
+						if err != nil {
+							return nil, nil, err
+						}
+
+						err = ipset.SuppressItemExist(policySetPeer.AddMember(member))
+						if err != nil {
+							return nil, nil, err
+						}
+					}
+				}
+			}
+
+			// for peer has CIDR field, add this cidr to the policy set
 			peerType := policytools.DetectPolicyPeerType(peer)
 			if peerType != policytools.PeerCIDR {
 				continue
 			}
 
-			member, err := ipset.NewMember(peer.Cidr, policySet)
+			member, err := ipset.NewMember(peer.Cidr, policySetPeer)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
-			err = ipset.SuppressItemExist(policySet.AddMember(member))
+			err = ipset.SuppressItemExist(policySetPeer.AddMember(member))
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
 
-	return policySet, nil
+	// create ipset records to match policy target by labels
+	for _, target := range policy.AppliedTo {
+		// if no labels defined then skip target
+		if len(target.Labels) == 0 {
+			continue
+		}
+
+		labelExpression := expression.ExpressionFromMap(target.Labels)
+		for _, endpoint := range endpointStore.List() {
+			if labelExpression.Eval(endpoint.Labels) {
+				member, err := ipset.NewMember(
+					fmt.Sprintf("%s/32", endpoint.IP),
+					policySetTarget,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				err = ipset.SuppressItemExist(policySetTarget.AddMember(member))
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+	}
+
+	return policySetTarget, policySetPeer, nil
 }
 
 // validateFunc is a signature for a function that validates api.Endpoint
@@ -468,6 +549,10 @@ func translateRule(policy api.Policy,
 	direction string,
 	iptables *iptsave.IPtables) error {
 
+	// hack to support workaround in blueprint.MakeLabelMatchSrc and
+	// blueprint.MakeLabelMatchDst. Remove when not necessary.
+	policytools.CurrentLabelPolicyGlobalVariableHack = policy
+
 	// detect target and peer type to choose proper translation scheme.
 	peerType := policytools.DetectPolicyPeerType(peer)
 	dstType := policytools.DetectPolicyTargetType(target)
@@ -535,6 +620,16 @@ func translateRule(policy api.Policy,
 // tenant and segment.
 // Always true for non tenant types of matching.
 func targetValid(target api.Endpoint, blocks []api.IPAMBlockResponse) bool {
+	// This condition tells enforcer to always create policy that selects a label
+	// even if no targets for that label could be found on current host,
+	// Such strategy trades memory for cpu, if at any point we would want to
+	// change that we will have to run labels evaluation here for each endpoint on
+	// given host to check that policy is required.
+	if len(target.Labels) > 0 {
+		log.Debugf("target %s is valid because it selects labels", target)
+		return true
+	}
+
 	// if endpoint doesn't match tenant this check is irrelevant.
 	if target.TenantID == "" {
 		log.Debugf("target %s is valid becuase it is not a tenant match", target)

@@ -34,6 +34,7 @@ import (
 	"github.com/romana/core/common"
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/client"
+	"github.com/romana/core/labels/controller"
 
 	log "github.com/romana/rlog"
 	"github.com/vishvananda/netlink"
@@ -175,6 +176,7 @@ func main() {
 		}
 
 		ctx := context.Background()
+
 		policyCache := policycache.New()
 		var policyEtcdKey = "/romana/policies"
 		policies, err := policycontroller.Run(ctx, policyEtcdKey, romanaClient, policyCache)
@@ -191,7 +193,9 @@ func main() {
 		var extraBlocksChannel <-chan api.IPAMBlocksResponse
 		blocksChannel, extraBlocksChannel = fanOut(ctx, blocksChannel)
 
-		enforcer, err := enforcer.New(policyCache, policies, *blocksList, extraBlocksChannel, *hostname, new(utilexec.DefaultExecutor), 10)
+		store, eChan, err := controller.EndpointController(ctx, romanaClient, "/romana/obj")
+
+		enforcer, err := enforcer.New(store, eChan, policyCache, policies, *blocksList, extraBlocksChannel, *hostname, new(utilexec.DefaultExecutor), 10)
 		if err != nil {
 			log.Errorf("Failed to create policy enforcer, %s", err)
 			os.Exit(2)
