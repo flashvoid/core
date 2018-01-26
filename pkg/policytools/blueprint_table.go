@@ -23,7 +23,247 @@ import (
 )
 
 var Blueprints = map[string]RuleBlueprint{
-
+                                   
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchDst,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchSrc,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeLabelMatchDst,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeLabelMatchSrc,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetTenant,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeDstTenantMatch,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetTenant,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeSrcTenantMatch,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetTenant,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeDstTenantMatch,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetTenant,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeSrcTenantMatch,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerAny,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchDst,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MatchEndpoint(""),
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerAny,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchSrc,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MatchEndpoint(""),
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerAny,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeLabelMatchDst,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MatchEndpoint(""),
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerAny,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeLabelMatchSrc,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MatchEndpoint(""),
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -43,7 +283,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -63,7 +303,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -83,7 +323,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -103,7 +343,87 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetTenantSegment,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeDstTenantSegmentMatch,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerLabel,
+		TargetTenantSegment,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeSrcTenantSegmentMatch,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetTenantSegment,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeDstTenantSegmentMatch,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchSrc,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerLabel,
+		TargetTenantSegment,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeSrcTenantSegmentMatch,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeLabelMatchDst,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -123,7 +443,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -143,7 +463,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -163,7 +483,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -183,7 +503,87 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerCIDR,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchDst,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeSrcCIDRMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerCIDR,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchSrc,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeDstCIDRMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerCIDR,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeLabelMatchDst,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeSrcCIDRMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerCIDR,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeLabelMatchSrc,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeDstCIDRMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -203,7 +603,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -223,7 +623,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -243,7 +643,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -263,7 +663,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -283,7 +683,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -303,7 +703,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -323,7 +723,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -343,7 +743,87 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerTenant,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchDst,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeSrcTenantMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerTenant,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchSrc,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeDstTenantMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerTenant,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeLabelMatchDst,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeSrcTenantMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerTenant,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeLabelMatchSrc,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeDstTenantMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -363,7 +843,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -383,7 +863,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -403,7 +883,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -423,7 +903,87 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemePolicyOnTop,
+		PeerTenantSegment,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchDst,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeSrcTenantSegmentMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemePolicyOnTop,
+		PeerTenantSegment,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MatchEndpoint(""),
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MakeRomanaPolicyName,
+		SecondRuleMatch:  MakeLabelMatchSrc,
+		SecondRuleAction: MakeRomanaPolicyNameExtended,
+		ThirdBaseChain:   MakeRomanaPolicyNameExtended,
+		ThirdRuleMatch:   MakeDstTenantSegmentMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionIngress,
+		SchemeTargetOnTop,
+		PeerTenantSegment,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointIngress,
+		TopRuleMatch:     MakeLabelMatchDst,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeSrcTenantSegmentMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "ACCEPT",
+	},
+                  
+	MakeBlueprintKey(
+		api.PolicyDirectionEgress,
+		SchemeTargetOnTop,
+		PeerTenantSegment,
+		TargetLabel,
+	): RuleBlueprint{
+		BaseChain:        firewall.ChainNameEndpointEgress,
+		TopRuleMatch:     MakeLabelMatchSrc,
+		TopRuleAction:    MakeRomanaPolicyName,
+		SecondBaseChain:  MatchPolicyString(""),
+		SecondRuleMatch:  MatchEndpoint(""),
+		SecondRuleAction: MatchPolicyString(""),
+		ThirdBaseChain:   MakeRomanaPolicyName,
+		ThirdRuleMatch:   MakeDstTenantSegmentMatch,
+		ThirdRuleAction:  MakeRomanaPolicyNameRules,
+		FourthBaseChain:  MakeRomanaPolicyNameRules,
+		FourthRuleMatch:  MakePolicyRuleWithAction,
+		FourthRuleAction: "DROP",
+	},
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -443,7 +1003,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -463,7 +1023,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -483,7 +1043,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -503,7 +1063,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -523,7 +1083,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -543,7 +1103,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -563,7 +1123,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -583,7 +1143,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -603,7 +1163,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemePolicyOnTop,
@@ -623,7 +1183,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -643,7 +1203,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionEgress,
 		SchemeTargetOnTop,
@@ -663,7 +1223,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "DROP",
 	},
-
+                  
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -683,7 +1243,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                                    
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -703,7 +1263,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                                    
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -723,7 +1283,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                                    
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -743,7 +1303,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                                    
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemePolicyOnTop,
@@ -763,7 +1323,7 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
-
+                                    
 	MakeBlueprintKey(
 		api.PolicyDirectionIngress,
 		SchemeTargetOnTop,
@@ -783,4 +1343,5 @@ var Blueprints = map[string]RuleBlueprint{
 		FourthRuleMatch:  MakePolicyRuleWithAction,
 		FourthRuleAction: "ACCEPT",
 	},
+                                                                                           
 }

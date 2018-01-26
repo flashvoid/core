@@ -71,10 +71,15 @@ const (
 	PeerTenantSegment PolicyPeerType = "peerTenantSegment"
 	PeerCIDR          PolicyPeerType = "peerCidr"
 	PeerAny           PolicyPeerType = "peerAny"
+	PeerLabel         PolicyPeerType = "peerLabel"
 	PeerUnknown       PolicyPeerType = "peerUnknown"
 )
 
 func DetectPolicyPeerType(peer api.Endpoint) PolicyPeerType {
+	if len(peer.Labels) > 0 {
+		return PeerLabel
+	}
+
 	if peer.Peer == "local" {
 		return PeerLocal
 	}
@@ -128,12 +133,17 @@ const (
 	TargetTenant        PolicyTargetType = "targetTenant"
 	TargetTenantSegment PolicyTargetType = "targetTenantSegment"
 
+	TargetLabel         PolicyTargetType = "targetLabel"
 	UnknownPolicyTarget PolicyTargetType = "unknown"
 )
 
 // DetectPolicyTargetType identifies given endpoint as one of valid policy
 // target types.
 func DetectPolicyTargetType(target api.Endpoint) PolicyTargetType {
+	if len(target.Labels) > 0 {
+		return TargetLabel
+	}
+
 	if target.Dest == "local" {
 		return TargetLocal
 	}
@@ -174,6 +184,21 @@ func MakeRomanaPolicyNameSetSrc(policy api.Policy) string {
 
 func MakeRomanaPolicyNameSetDst(policy api.Policy) string {
 	return fmt.Sprintf("%s_d", MakeRomanaPolicyName(policy))
+}
+
+// TODO for Stas. Global variable hack to get around
+// incompatible type for MakeLabelMatchSrc and MakeLabelMatchDst.
+// This functions require policy but contract only giving them an
+// endpoint.
+// To fix Blueprint.TopRuleMatch type need to be changed together
+// with all implementations.
+var CurrentLabelPolicyGlobalVariableHack api.Policy
+
+func MakeLabelMatchSrc(api.Endpoint) string {
+	return fmt.Sprintf("-m set --match-set %s src", MakeRomanaPolicyNameSetSrc(CurrentLabelPolicyGlobalVariableHack))
+}
+func MakeLabelMatchDst(api.Endpoint) string {
+	return fmt.Sprintf("-m set --match-set %s dst", MakeRomanaPolicyNameSetDst(CurrentLabelPolicyGlobalVariableHack))
 }
 
 // MakePolicyRule translates common.Rule into iptsave.IPrule.
