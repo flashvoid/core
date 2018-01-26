@@ -34,11 +34,12 @@ const (
 // has an IP address and routes to/from. It can be a container,
 // a Kubernetes POD, a VM, etc.
 type Endpoint struct {
-	Peer      string `json:"peer,omitempty"`
-	Cidr      string `json:"cidr,omitempty"`
-	Dest      string `json:"dest,omitempty"`
-	TenantID  string `json:"tenant_id,omitempty"`
-	SegmentID string `json:"segment_id,omitempty"`
+	Peer      string            `json:"peer,omitempty"`
+	Cidr      string            `json:"cidr,omitempty"`
+	Dest      string            `json:"dest,omitempty"`
+	TenantID  string            `json:"tenant_id,omitempty"`
+	SegmentID string            `json:"segment_id,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
 }
 
 func (e Endpoint) String() string {
