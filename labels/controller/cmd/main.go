@@ -49,7 +49,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	store, eChan, err := controller.EndpointController(ctx, romanaClient, "/romana/obj")
+	var romanaObjectsKey = client.DefaultEtcdPrefix + client.RomanaObjectsPrefix
+	store, eChan, err := controller.EndpointController(ctx, romanaClient, romanaObjectsKey)
 
 	go func() {
 		for {

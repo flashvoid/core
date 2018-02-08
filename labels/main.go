@@ -31,6 +31,7 @@ import (
 	"github.com/docker/libkv/store"
 	"github.com/romana/core/common"
 	"github.com/romana/core/common/client"
+	"github.com/romana/core/labels/schema"
 	"github.com/romana/core/labels/types"
 	log "github.com/romana/rlog"
 	"k8s.io/client-go/kubernetes"
@@ -69,7 +70,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ipamCh, err := IpamController(ctx, *etcdPrefix+ipamDataKey, romanaClient)
+	ipamCh, err := IpamController(ctx, client.DefaultEtcdPrefix+client.IpamDataKey, romanaClient)
 	if err != nil {
 		log.Errorf("failed to start ipam controller, err=%s", err)
 		os.Exit(2)
@@ -312,7 +313,8 @@ func TopologySync(ctx context.Context,
 				// corresponding pod
 
 				// fetch etcd.Nodes from /obj key
-				res, err := romanaClient.Store.GetExt("/romana/obj",
+				var romanaObjectsKey = client.DefaultEtcdPrefix + client.RomanaObjectsPrefix
+				res, err := romanaClient.Store.GetExt(romanaObjectsKey,
 					store.GetOptions{Recursive: true})
 				if err != nil {
 					log.Errorf("full sync failed err=%s", err)
@@ -439,7 +441,7 @@ func storeEndpoint(romanaClient *client.Client, endpoint types.Endpoint) error {
 		return err
 	}
 
-	err = romanaClient.Store.Put("/romana/"+schema.EndpointKey(endpoint), data, nil)
+	err = romanaClient.Store.Put(client.DefaultEtcdPrefix+schema.EndpointKey(endpoint), data, nil)
 	if err != nil {
 		return err
 	}
@@ -451,36 +453,4 @@ func storeEndpoint(romanaClient *client.Client, endpoint types.Endpoint) error {
 func deleteEndpoint(romanaClient *client.Client, endpoint types.Endpoint) error {
 	_, err := romanaClient.Store.Delete(schema.EndpointKey(endpoint))
 	return err
-}
-
-// schematic generates appropriate etcd key from object
-// TODO make it a separate package.
-type schematic struct {
-	Prefix string
-	Map    map[string]string
-}
-
-// NetworkKey makes an etcd key for Network object.
-func (s schematic) NetworkKey(network client.Network) string {
-	return fmt.Sprintf(s.Map["Network"], network.Name)
-}
-
-// BlockKey makes an etcd key for Block object.
-func (s schematic) BlockKey(network client.Network, block client.Block) string {
-	return fmt.Sprintf(s.Map["Block"], network.Name, block.CIDR.String())
-}
-
-// EndpointKey make an etcd key for Endpoint object.
-func (s schematic) EndpointKey(endpoint types.Endpoint) string {
-	cidr := strings.Replace(endpoint.Block, "/", "s", -1)
-	return fmt.Sprintf(s.Map["Endpoint"], endpoint.Network, cidr, endpoint.Name)
-}
-
-var schema = schematic{
-	Prefix: "/romana",
-	Map: map[string]string{
-		"Network":  "/obj/networks/%s",
-		"Block":    "/obj/networks/%s/blocks/%s",
-		"Endpoint": "/obj/networks/%s/blocks/%s/endpoints/%s",
-	},
 }

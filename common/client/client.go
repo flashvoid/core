@@ -34,9 +34,10 @@ const (
 	DefaultEtcdPrefix     = "/romana"
 	DefaultEtcdEndpoints  = "localhost:2379"
 	ipamKey               = "/ipam"
-	ipamDataKey           = ipamKey + "/data"
+	IpamDataKey           = ipamKey + "/data"
 	PoliciesPrefix        = "/policies"
 	RomanaIPPrefix        = "/romanaip"
+	RomanaObjectsPrefix   = "/obj"
 	defaultTopologyLevels = 20
 )
 
@@ -127,7 +128,7 @@ func (c *Client) WatchBlocksWithCallback(cb BlocksCallback) error {
 // to watching for blocks.
 func (c *Client) WatchBlocks(stopCh <-chan struct{}) (<-chan api.IPAMBlocksResponse, error) {
 	log.Tracef(trace.Public, "Entering WatchBlocks.")
-	ch, err := c.Store.ReconnectingWatch(ipamDataKey, stopCh)
+	ch, err := c.Store.ReconnectingWatch(IpamDataKey, stopCh)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func (c *Client) WatchBlocks(stopCh <-chan struct{}) (<-chan api.IPAMBlocksRespo
 // to watching for host list.
 func (c *Client) WatchHosts(stopCh <-chan struct{}) (<-chan api.HostList, error) {
 	log.Tracef(trace.Public, "Entering WatchHosts.")
-	ch, err := c.Store.ReconnectingWatch(ipamDataKey, stopCh)
+	ch, err := c.Store.ReconnectingWatch(IpamDataKey, stopCh)
 	if err != nil {
 		return nil, err
 	}
@@ -332,14 +333,14 @@ func (c *Client) initIPAM(initialTopologyFile *string) error {
 
 	// Check if IPAM info exists in the store
 	var ipamExists bool
-	ipamExists, err = c.Store.Exists(ipamDataKey)
+	ipamExists, err = c.Store.Exists(IpamDataKey)
 	if err != nil {
 		return err
 	}
-	log.Infof("IPAM exists at %s: %t", ipamDataKey, ipamExists)
+	log.Infof("IPAM exists at %s: %t", IpamDataKey, ipamExists)
 	// make sure there is sane data in ipam.
 	if ipamExists {
-		ipamData, err := c.Store.GetString(ipamDataKey, "")
+		ipamData, err := c.Store.GetString(IpamDataKey, "")
 		if err != nil {
 			log.Errorf("Error while fetching ipam data: %s", err)
 			return err
@@ -357,7 +358,7 @@ func (c *Client) initIPAM(initialTopologyFile *string) error {
 			}
 			if ipam.AllocationRevision < 1 && ipam.TopologyRevision < 1 {
 				log.Warnf("Allocation revision: %d, Topology revision %d, deleting", ipam.AllocationRevision, ipam.TopologyRevision)
-				c.Store.Delete(ipamDataKey)
+				c.Store.Delete(IpamDataKey)
 				log.Trace(trace.Inside, "Setting ipamExists to false because deleted")
 				ipamExists = false
 			}
@@ -369,8 +370,8 @@ func (c *Client) initIPAM(initialTopologyFile *string) error {
 			log.Infof("Ignoring initial topology file %s as IPAM already exists", *initialTopologyFile)
 		}
 		// Load if exists
-		log.Infof("Loading IPAM data from %s", c.Store.getKey(ipamDataKey))
-		kv, err := c.Store.Get(ipamDataKey)
+		log.Infof("Loading IPAM data from %s", c.Store.getKey(IpamDataKey))
+		kv, err := c.Store.Get(IpamDataKey)
 		if err != nil {
 			return err
 		}
@@ -385,7 +386,7 @@ func (c *Client) initIPAM(initialTopologyFile *string) error {
 	} else {
 		// If does not exist -- initialize with initial topology.
 
-		log.Infof("No IPAM data found at %s, initializing", c.Store.getKey(ipamDataKey))
+		log.Infof("No IPAM data found at %s, initializing", c.Store.getKey(IpamDataKey))
 		c.IPAM = &IPAM{locker: c.ipamLocker,
 			save: c.save,
 			load: c.load,
@@ -417,7 +418,7 @@ func (c *Client) initIPAM(initialTopologyFile *string) error {
 }
 
 func (c *Client) load(ipam *IPAM, ch <-chan struct{}) error {
-	kv, err := c.Store.Get(ipamDataKey)
+	kv, err := c.Store.Get(IpamDataKey)
 	if err != nil {
 		return err
 	}
@@ -451,7 +452,7 @@ func (c *Client) save(ipam *IPAM, ch <-chan struct{}) error {
 		log.Warn(fmt.Sprintf("Lost lock while saving in %d: %p", getGID(), &msg))
 		return nil
 	default:
-		err = c.Store.AtomicPut(ipamDataKey, ipam)
+		err = c.Store.AtomicPut(IpamDataKey, ipam)
 		if err != nil {
 			log.Errorf("Error saving IPAM: %s: %d", err, getGID())
 			return err
@@ -466,7 +467,7 @@ func (c *Client) save(ipam *IPAM, ch <-chan struct{}) error {
 func (c *Client) watchIPAM() error {
 	log.Tracef(trace.Public, "Entering watchIPAM.")
 	stopCh := make(<-chan struct{})
-	ch, err := c.Store.ReconnectingWatch(ipamDataKey, stopCh)
+	ch, err := c.Store.ReconnectingWatch(IpamDataKey, stopCh)
 	if err != nil {
 		return err
 	}
@@ -564,7 +565,7 @@ func (c *Client) GetTopology() (interface{}, error) {
 	}
 	defer c.ipamLocker.Unlock()
 
-	kv, err := c.Store.Get(ipamDataKey)
+	kv, err := c.Store.Get(IpamDataKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch ipam information: %s", err)
 	}

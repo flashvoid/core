@@ -178,7 +178,7 @@ func main() {
 		ctx := context.Background()
 
 		policyCache := policycache.New()
-		var policyEtcdKey = "/romana/policies"
+		var policyEtcdKey = client.DefaultEtcdPrefix + client.PoliciesPrefix
 		policies, err := policycontroller.Run(ctx, policyEtcdKey, romanaClient, policyCache)
 		if err != nil {
 			log.Errorf("Failed to start policy controller, %s", err)
@@ -193,7 +193,8 @@ func main() {
 		var extraBlocksChannel <-chan api.IPAMBlocksResponse
 		blocksChannel, extraBlocksChannel = fanOut(ctx, blocksChannel)
 
-		store, eChan, err := controller.EndpointController(ctx, romanaClient, "/romana/obj")
+		var romanaObjectsKey = client.DefaultEtcdPrefix + client.RomanaObjectsPrefix
+		store, eChan, err := controller.EndpointController(ctx, romanaClient, romanaObjectsKey)
 
 		enforcer, err := enforcer.New(store, eChan, policyCache, policies, *blocksList, extraBlocksChannel, *hostname, new(utilexec.DefaultExecutor), 10)
 		if err != nil {

@@ -28,6 +28,7 @@ import (
 	"github.com/romana/core/agent/iptsave"
 	"github.com/romana/core/agent/policycache"
 	"github.com/romana/core/common/api"
+	"github.com/romana/core/labels/controller"
 	"github.com/romana/core/pkg/policytools"
 
 	"github.com/romana/ipset"
@@ -151,6 +152,9 @@ func TestMakePolicyRules(t *testing.T) {
 }
 
 func TestMakePolicySets(t *testing.T) {
+	// TODO, makePolicySets signature changed
+	// and now test does not cover all the cases.
+
 	makeEndpoints := func(endpoints ...api.Endpoint) (result []api.Endpoint) {
 		for _, e := range endpoints {
 			result = append(result, e)
@@ -232,7 +236,7 @@ func TestMakePolicySets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			set1, err := makePolicySets(tc.policy)
+			set1, _, err := makePolicySets(tc.policy, controller.NewEndpointStorage())
 			sets := ipset.Ipset{Sets: []*ipset.Set{set1}}
 			t.Log(sets.Render(ipset.RenderSave))
 
@@ -245,6 +249,8 @@ func TestMakePolicySets(t *testing.T) {
 }
 
 func TestMakeBlockSets(t *testing.T) {
+	// TODO, makeBlockSets signature changed
+	// and now test does not cover all the cases.
 
 	makeCIDR := func(s string) api.IPNet {
 		_, ipnet, _ := net.ParseCIDR(s)
@@ -342,7 +348,7 @@ func TestMakeBlockSets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		sets, err := makeBlockSets(tc.blockCache, policycache.New(), tc.hostname)
+		sets, err := makeBlockSets(tc.blockCache, policycache.New(), controller.NewEndpointStorage(), tc.hostname)
 		t.Log(sets.Render(ipset.RenderSave))
 
 		for _, expect := range tc.expect {
