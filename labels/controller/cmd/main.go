@@ -51,6 +51,10 @@ func main() {
 
 	var romanaObjectsKey = client.DefaultEtcdPrefix + client.RomanaObjectsPrefix
 	store, eChan, err := controller.EndpointController(ctx, romanaClient, romanaObjectsKey)
+	if err != nil {
+		log.Errorf("Failed to create endpoints controller: %v", err)
+		os.Exit(2)
+	}
 
 	go func() {
 		for {

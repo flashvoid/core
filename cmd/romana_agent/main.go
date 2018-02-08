@@ -208,6 +208,10 @@ func main() {
 
 		var romanaObjectsKey = client.DefaultEtcdPrefix + client.RomanaObjectsPrefix
 		store, eChan, err := controller.EndpointController(ctx, romanaClient, romanaObjectsKey)
+		if err != nil {
+			log.Errorf("Failed to create endpoints controller, %s", err)
+			os.Exit(2)
+		}
 
 		enforcer, err := enforcer.New(store, eChan, policyCache, policies, *blocksList, extraBlocksChannel, *hostname, new(utilexec.DefaultExecutor), 10)
 		if err != nil {

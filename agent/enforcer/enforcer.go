@@ -308,9 +308,12 @@ func makePolicySets(policy api.Policy, endpointStore controller.Store) (*ipset.S
 
 	policySetDst, err = ipset.NewSet(
 		policytools.MakeRomanaPolicyNameSetDst(policy), ipset.SetHashNet)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	policySetSrc, err = ipset.NewSet(
 		policytools.MakeRomanaPolicyNameSetSrc(policy), ipset.SetHashNet)
-
 	if err != nil {
 		return nil, nil, err
 	}

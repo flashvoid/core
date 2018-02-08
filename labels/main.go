@@ -42,11 +42,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const (
-	ipamKey     = "/ipam"
-	ipamDataKey = ipamKey + "/data"
-)
-
 func main() {
 	etcdEndpoints := flag.String("endpoints", "http://192.168.99.10:12379",
 		"csv list of etcd endpoints to romana storage")
