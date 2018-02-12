@@ -13,6 +13,8 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+// Package expression provides primitives to evaluate label expressions
+// like `app=nginx` against collection of kay=value fields.
 package expression
 
 import (

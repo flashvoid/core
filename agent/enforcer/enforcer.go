@@ -134,7 +134,7 @@ func (a *Enforcer) Run(ctx context.Context) {
 			select {
 			case <-a.ticker.C:
 				if !a.policyUpdate && !a.blocksUpdate && !a.endpointUpdate {
-					log.Tracef(5, "Policy enforcer tick skipped due no updates, block update=%t and policy update=%t", a.blocksUpdate, a.policyUpdate)
+					log.Tracef(5, "Policy enforcer tick skipped due no updates")
 					continue
 				}
 
@@ -355,7 +355,7 @@ func makePolicySets(policy api.Policy, endpointStore controller.Store) (*ipset.S
 				}
 			}
 
-			// for peer has CIDR field, add this cidr to the policy set
+			// If peer has CIDR field, add this cidr to the policy set.
 			peerType := policytools.DetectPolicyPeerType(peer)
 			if peerType != policytools.PeerCIDR {
 				continue
