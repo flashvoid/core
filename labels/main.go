@@ -34,10 +34,9 @@ import (
 	"github.com/romana/core/labels/schema"
 	"github.com/romana/core/labels/types"
 	log "github.com/romana/rlog"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -161,13 +160,13 @@ const (
 )
 
 // PodsController produces events when kubernetes pods are updated.
-func PodsController(ctx context.Context, kubeClient *kubernetes.Clientset) (chan PodEvent, cache.Store, *cache.Controller) {
+func PodsController(ctx context.Context, kubeClient *kubernetes.Clientset) (chan PodEvent, cache.Store, cache.Controller) {
 	podsChan := make(chan PodEvent)
 
 	podWatcher := cache.NewListWatchFromClient(
-		kubeClient.CoreV1Client.RESTClient(),
+		kubeClient.CoreV1().RESTClient(),
 		"pods",
-		api.NamespaceAll,
+		v1.NamespaceAll,
 		fields.Everything())
 
 	podStore, podInformer := cache.NewInformer(
