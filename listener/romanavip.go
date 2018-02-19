@@ -27,7 +27,7 @@ import (
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/log/trace"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -300,7 +300,7 @@ func (l *KubeListener) extractServiceDetails(svc interface{}) (
 	key := serviceName + "." + namespace
 
 	pods, err := l.kubeClientSet.CoreV1().Endpoints(namespace).List(
-		metav1.ListOptions{
+		meta_v1.ListOptions{
 			LabelSelector: labels.FormatLabels(service.GetLabels()),
 		})
 	if len(pods.Items) < 1 {
@@ -318,7 +318,7 @@ func (l *KubeListener) extractServiceDetails(svc interface{}) (
 
 	// use first pod to get node address for now until we support ipam
 	// for romana VIP allocations.
-	node, err := l.kubeClientSet.CoreV1().Nodes().Get(*pods.Items[0].Subsets[0].Addresses[0].NodeName, metav1.GetOptions{})
+	node, err := l.kubeClientSet.CoreV1().Nodes().Get(*pods.Items[0].Subsets[0].Addresses[0].NodeName, meta_v1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("node not found for pod for service (%s): %s",
 			serviceName, err)
