@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/containernetworking/cni/pkg/types"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -83,7 +84,7 @@ func GetPodDescription(args K8sArgs, configFile string) (*PodDescription, error)
 		return nil, err
 	}
 
-	pod, err := kubeClient.Core().Pods(string(args.K8S_POD_NAMESPACE)).Get(fmt.Sprintf("%s", args.K8S_POD_NAME))
+	pod, err := kubeClient.Core().Pods(string(args.K8S_POD_NAMESPACE)).Get(fmt.Sprintf("%s", args.K8S_POD_NAME), meta_v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to discover a pod %s, err=(%s)", args.K8S_POD_NAME, err)
 	}
