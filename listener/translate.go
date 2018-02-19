@@ -27,7 +27,7 @@ import (
 	"github.com/romana/core/common/log/trace"
 	log "github.com/romana/rlog"
 
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 )
 
 type PolicyTranslator interface {

@@ -26,10 +26,10 @@ import (
 	"github.com/romana/core/common"
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/client"
-
-	log "github.com/romana/rlog"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	log "github.com/romana/rlog"
 )
 
 const (
@@ -65,7 +65,7 @@ type KubeListener struct {
 	policiesSynced bool
 
 	nodeStore    cache.Store
-	nodeInformer *cache.Controller
+	nodeInformer cache.Controller
 
 	// This is intended to lock for the purposes of changing
 	// syncNodesRunning flag. See documentation for syncNodes() for the rest.

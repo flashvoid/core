@@ -25,10 +25,10 @@ import (
 
 	"github.com/romana/core/common/api"
 
-	"k8s.io/client-go/pkg/api/unversioned"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-	"k8s.io/client-go/pkg/util/intstr"
+	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var tdir = "testdata"
@@ -132,12 +132,12 @@ func TestTranslateTarget(t *testing.T) {
 	}
 
 	testCases := []struct {
-		PodSelector  unversioned.LabelSelector
+		PodSelector  v1.LabelSelector
 		RomanaPolicy api.Policy
 		expected     func(*api.Policy) bool
 	}{
 		{
-			PodSelector: unversioned.LabelSelector{
+			PodSelector: v1.LabelSelector{
 				MatchLabels: map[string]string{},
 			},
 			RomanaPolicy: api.Policy{
@@ -148,7 +148,7 @@ func TestTranslateTarget(t *testing.T) {
 			},
 		},
 		{
-			PodSelector: unversioned.LabelSelector{
+			PodSelector: v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"unrelated_label": "banana",
 				},
@@ -160,7 +160,7 @@ func TestTranslateTarget(t *testing.T) {
 				return p.AppliedTo[0].TenantID == "default"
 			},
 		}, {
-			PodSelector: unversioned.LabelSelector{
+			PodSelector: v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"role": "TestSegment",
 				},
@@ -220,7 +220,7 @@ func TestMakeNextIngressPeer(t *testing.T) {
 		{
 			From: []v1beta1.NetworkPolicyPeer{
 				v1beta1.NetworkPolicyPeer{
-					PodSelector: &unversioned.LabelSelector{},
+					PodSelector: &v1.LabelSelector{},
 				},
 			},
 			RomanaPolicy: api.Policy{
@@ -235,7 +235,7 @@ func TestMakeNextIngressPeer(t *testing.T) {
 		}, {
 			From: []v1beta1.NetworkPolicyPeer{
 				v1beta1.NetworkPolicyPeer{
-					NamespaceSelector: &unversioned.LabelSelector{
+					NamespaceSelector: &v1.LabelSelector{
 						MatchLabels: map[string]string{
 							"tenantName": "source-tenant",
 						},
@@ -254,14 +254,14 @@ func TestMakeNextIngressPeer(t *testing.T) {
 		}, {
 			From: []v1beta1.NetworkPolicyPeer{
 				v1beta1.NetworkPolicyPeer{
-					PodSelector: &unversioned.LabelSelector{
+					PodSelector: &v1.LabelSelector{
 						MatchLabels: map[string]string{
 							"role": "TestSegment",
 						},
 					},
 				},
 				v1beta1.NetworkPolicyPeer{
-					PodSelector: &unversioned.LabelSelector{
+					PodSelector: &v1.LabelSelector{
 						MatchLabels: map[string]string{
 							"role": "AnotherTestSegment",
 						},
@@ -325,8 +325,8 @@ func TestMakeNextRule(t *testing.T) {
 		segmentLabelName: "role",
 	}
 
-	var portTCP v1.Protocol = "TCP"
-	var portUDP v1.Protocol = "UDP"
+	var portTCP core_v1.Protocol = "TCP"
+	var portUDP core_v1.Protocol = "UDP"
 	var port53 intstr.IntOrString = intstr.FromInt(53)
 	var port80 intstr.IntOrString = intstr.FromInt(80)
 

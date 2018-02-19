@@ -26,13 +26,13 @@ import (
 
 	"github.com/romana/core/common/api"
 	"github.com/romana/core/common/log/trace"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 
 	log "github.com/romana/rlog"
-	k8sapi "k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/pkg/labels"
-	"k8s.io/client-go/tools/cache"
 )
 
 type ExposedIPSpecMap struct {
@@ -48,9 +48,9 @@ func (l *KubeListener) startRomanaVIPSync(stop <-chan struct{}) {
 	// serviceWatcher is a new ListWatch object created from the specified
 	// CoreClientSet above for watching service events.
 	serviceWatcher := cache.NewListWatchFromClient(
-		l.kubeClientSet.CoreV1Client.RESTClient(),
+		l.kubeClientSet.CoreV1().RESTClient(),
 		"services",
-		k8sapi.NamespaceAll,
+		v1.NamespaceAll,
 		fields.Everything())
 
 	// Setup a notifications for specific events using NewInformer.
@@ -159,7 +159,7 @@ func (l *KubeListener) syncRomanaVIPs(serviceStore cache.Store) {
 		// update service locally for external IP
 		updatedService := serviceMap[key]
 		updatedService.Spec.ExternalIPs = []string{rip.RomanaVIP.IP}
-		_, err := l.kubeClientSet.CoreV1Client.Services(rip.Namespace).Update(&updatedService)
+		_, err := l.kubeClientSet.CoreV1().Services(rip.Namespace).Update(&updatedService)
 		if err != nil {
 			log.Errorf("externalIP couldn't be updated for service (%s): %s",
 				key, err)
@@ -299,8 +299,8 @@ func (l *KubeListener) extractServiceDetails(svc interface{}) (
 
 	key := serviceName + "." + namespace
 
-	pods, err := l.kubeClientSet.CoreV1Client.Endpoints(namespace).List(
-		v1.ListOptions{
+	pods, err := l.kubeClientSet.CoreV1().Endpoints(namespace).List(
+		metav1.ListOptions{
 			LabelSelector: labels.FormatLabels(service.GetLabels()),
 		})
 	if len(pods.Items) < 1 {
@@ -318,7 +318,7 @@ func (l *KubeListener) extractServiceDetails(svc interface{}) (
 
 	// use first pod to get node address for now until we support ipam
 	// for romana VIP allocations.
-	node, err := l.kubeClientSet.CoreV1Client.Nodes().Get(*pods.Items[0].Subsets[0].Addresses[0].NodeName)
+	node, err := l.kubeClientSet.CoreV1().Nodes().Get(*pods.Items[0].Subsets[0].Addresses[0].NodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("node not found for pod for service (%s): %s",
 			serviceName, err)
@@ -411,7 +411,7 @@ func (l *KubeListener) updateRomanaVIP(service *v1.Service) error {
 
 	updatedService := *service
 	updatedService.Spec.ExternalIPs = []string{exposedIPSpec.RomanaVIP.IP}
-	_, err = l.kubeClientSet.CoreV1Client.Services(exposedIPSpec.Namespace).Update(&updatedService)
+	_, err = l.kubeClientSet.CoreV1().Services(exposedIPSpec.Namespace).Update(&updatedService)
 	if err != nil {
 		return fmt.Errorf("externalIP couldn't be updated for service (%s): %s",
 			service.GetName(), err)

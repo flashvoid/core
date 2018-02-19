@@ -23,8 +23,8 @@ import (
 	"github.com/romana/core/common"
 	"github.com/romana/core/common/client"
 
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestSyncNetworkPolicies(t *testing.T) {

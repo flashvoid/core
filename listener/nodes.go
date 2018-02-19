@@ -29,17 +29,16 @@ import (
 
 	"github.com/elgs/gojq"
 	log "github.com/romana/rlog"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 
 	romanaApi "github.com/romana/core/common/api"
 	romanaErrors "github.com/romana/core/common/api/errors"
 
 	"github.com/romana/core/common/log/trace"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 )
 
 func (l *KubeListener) kubeClientInit() error {
@@ -211,9 +210,9 @@ func (l *KubeListener) ProcessNodeEvents(done <-chan struct{}) {
 	// nodeWatcher is a new ListWatch object created from the specified
 	// kubeClientSet which k8s.io/client-go exports for watching node events.
 	nodeWatcher := cache.NewListWatchFromClient(
-		l.kubeClientSet.CoreV1Client.RESTClient(),
+		l.kubeClientSet.CoreV1().RESTClient(),
 		"nodes",
-		api.NamespaceAll,
+		v1.NamespaceAll,
 		fields.Everything())
 
 	// Setup a notifications for specific events using NewInformer.
