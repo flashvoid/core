@@ -30,14 +30,26 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 
 	// k8s client-go imports
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/unversioned"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
 	"golang.org/x/sys/unix"
+)
+
+const (
+	// If you add a new topology domain here, also consider adding it to the set of default values
+	// for the scheduler's --failure-domain command-line argument.
+	LabelHostname          = "kubernetes.io/hostname"
+	LabelZoneFailureDomain = "failure-domain.beta.kubernetes.io/zone"
+	LabelZoneRegion        = "failure-domain.beta.kubernetes.io/region"
+
+	LabelInstanceType = "beta.kubernetes.io/instance-type"
+
+	LabelOS   = "beta.kubernetes.io/os"
+	LabelArch = "beta.kubernetes.io/arch"
 )
 
 func main() {
@@ -113,22 +125,22 @@ func add(awsSession *session.Session, obj interface{}) {
 		log.Println("no value for node.Spec.ExternalID on node", node.ObjectMeta.Name)
 		return
 	}
-	region, ok := node.ObjectMeta.Labels[unversioned.LabelZoneRegion]
+	region, ok := node.ObjectMeta.Labels[LabelZoneRegion]
 	if !ok {
-		log.Println("no value for label", unversioned.LabelZoneRegion, "on node", node.ObjectMeta.Name)
+		log.Println("no value for label", LabelZoneRegion, "on node", node.ObjectMeta.Name)
 		return
 	}
 	if region == "" {
-		log.Println("empty value for label", unversioned.LabelZoneRegion, "on node", node.ObjectMeta.Name)
+		log.Println("empty value for label", LabelZoneRegion, "on node", node.ObjectMeta.Name)
 		return
 	}
-	zone, ok := node.ObjectMeta.Labels[unversioned.LabelZoneFailureDomain]
+	zone, ok := node.ObjectMeta.Labels[LabelZoneFailureDomain]
 	if !ok {
-		log.Println("no value for label", unversioned.LabelZoneFailureDomain, "on node", node.ObjectMeta.Name)
+		log.Println("no value for label", LabelZoneFailureDomain, "on node", node.ObjectMeta.Name)
 		return
 	}
 	if zone == "" {
-		log.Println("empty value for label", unversioned.LabelZoneFailureDomain, "on node", node.ObjectMeta.Name)
+		log.Println("empty value for label", LabelZoneFailureDomain, "on node", node.ObjectMeta.Name)
 		return
 	}
 
