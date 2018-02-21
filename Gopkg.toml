@@ -24,7 +24,7 @@
 
 [[constraint]]
   name = "github.com/docker/libkv"
-  revision = "romana"
+  branch = "romana"
   source = "https://github.com/romana/libkv"
 
 [[constraint]]

@@ -91,13 +91,14 @@
   revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
 
 [[projects]]
+  branch = "romana"
   name = "github.com/docker/libkv"
   packages = [
     ".",
     "store",
     "store/etcd"
   ]
-  revision = "romana"
+  revision = "cbfcaba3d954dbbf46f9b966fd54d04936dba90b"
   source = "https://github.com/romana/libkv"
 
 [[projects]]
@@ -647,6 +648,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "da4b72fdf2b74f5109541b4a9bbb961c12f38d24c6ac60d688cdb5cdc4391d54"
+  inputs-digest = "d26ab58f3df7d374f52a1dc871fa00b1d1bdc555293e82e7228e9d43fd174ce5"
   solver-name = "gps-cdcl"
   solver-version = 1
