@@ -1,0 +1,200 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/K-Phoen/negotiation"
+
+[[constraint]]
+  name = "github.com/codegangsta/negroni"
+  revision = "5dbbc83f748fc3ad38585842b0aedab546d0ea1e"
+
+[[constraint]]
+  name = "github.com/coreos/etcd"
+  revision = "28f3f26c0e303392556035b694f75768d449d33d"
+
+[[override]]
+  name = "github.com/coreos/go-semver"
+  revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
+
+[[override]]
+  name = "github.com/davecgh/go-spew"
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+
+[[constraint]]
+  name = "github.com/dgrijalva/jwt-go"
+  revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
+
+[[constraint]]
+  name = "github.com/docker/libkv"
+  revision = "romana"
+  source = "https://github.com/romana/libkv"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/elgs/gojq"
+
+[[override]]
+  branch = "master"
+  name = "github.com/elgs/gosplitargs"
+
+[[override]]
+  name = "github.com/fsnotify/fsnotify"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+
+[[override]]
+  name = "github.com/ghodss/yaml"
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+
+[[override]]
+  name = "github.com/gogo/protobuf"
+  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
+
+[[override]]
+  branch = "master"
+  name = "github.com/golang/glog"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+
+[[override]]
+  branch = "master"
+  name = "github.com/google/btree"
+
+[[override]]
+  branch = "master"
+  name = "github.com/google/gofuzz"
+
+[[override]]
+  name = "github.com/googleapis/gnostic"
+  revision = "ee43cbb60db7bd22502942cccbc39059117352ab"
+
+[[constraint]]
+  name = "github.com/gorilla/context"
+  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
+
+[[override]]
+  branch = "master"
+  name = "github.com/gregjones/httpcache"
+
+[[override]]
+  branch = "master"
+  name = "github.com/hashicorp/golang-lru"
+
+[[override]]
+  branch = "master"
+  name = "github.com/hashicorp/hcl"
+
+[[override]]
+  name = "github.com/inconshreveable/mousetrap"
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+
+[[override]]
+  name = "github.com/json-iterator/go"
+  revision = "e7c7f3b33712573affdcc7a107218e7926b9a05b"
+
+[[override]]
+  name = "github.com/juju/ratelimit"
+  revision = "59fac5042749a5afb9af70e813da1dd5474f0167"
+
+[[override]]
+  name = "github.com/magiconair/properties"
+  revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mohae/deepcopy"
+
+[[constraint]]
+  name = "github.com/pborman/uuid"
+  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
+
+[[override]]
+  name = "github.com/pelletier/go-toml"
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+
+[[override]]
+  branch = "master"
+  name = "github.com/petar/GoLLRB"
+
+[[override]]
+  name = "github.com/peterbourgon/diskv"
+  revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/romana/rlog"
+
+[[override]]
+  name = "github.com/spf13/afero"
+  revision = "bb8f1927f2a9d3ab41c9340aa034f6b803f4359c"
+
+[[override]]
+  name = "github.com/spf13/cast"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
+
+[[override]]
+  branch = "master"
+  name = "github.com/spf13/jwalterweatherman"
+
+[[override]]
+  name = "github.com/spf13/pflag"
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  revision = "25b30aa063fc18e48662b86996252eabdcf2f0c7"
+
+[[override]]
+  name = "github.com/ugorji/go"
+  revision = "9831f2c3ac1068a78f50999a30db84270f647af6"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[override]]
+  branch = "master"
+  name = "golang.org/x/net"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sys"
+
+[[override]]
+  branch = "master"
+  name = "golang.org/x/text"
+
+[[override]]
+  name = "gopkg.in/inf.v0"
+  version = "v0.9.0"
+
+[[constraint]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
+
+[[constraint]]
+  branch = "master"
+  name = "k8s.io/api"
+
+[[constraint]]
+  branch = "master"
+  name = "k8s.io/apimachinery"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  revision = "78700dec6369ba22221b72770783300f143df150"
+
+[[constraint]]
+  name = "github.com/romana/ipset"
+  branch = "master"
