@@ -105,8 +105,8 @@ func TestMakePolicyRules(t *testing.T) {
 				ID:        "<TESTPOLICYID>",
 				Direction: api.PolicyDirectionIngress,
 				AppliedTo: makeEndpoints(withTenant("T1000")),
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{
 						Peers: makeEndpoints(withCidr("10.0.0.0/99")),
 						Rules: makeRules(withProtoPorts("TCP", 80, 99, 8080)),
 					},
@@ -120,8 +120,8 @@ func TestMakePolicyRules(t *testing.T) {
 				ID:        "<TESTPOLICYID>",
 				Direction: api.PolicyDirectionEgress,
 				AppliedTo: makeEndpoints(withTenant("T1000"), withTenantSegment("T800", "John")),
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{
 						Peers: makeEndpoints(
 							withCidr("10.0.0.0/99"),
 							withTenant("T3000"),
@@ -207,8 +207,8 @@ func TestMakePolicySets(t *testing.T) {
 				ID:        "<TESTPOLICYID>",
 				Direction: api.PolicyDirectionIngress,
 				AppliedTo: makeEndpoints(withTenant("T1000")),
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{
 						Peers: makeEndpoints(withCidr("10.0.0.0/99")),
 					},
 				},
@@ -221,8 +221,8 @@ func TestMakePolicySets(t *testing.T) {
 				ID:        "<TESTPOLICYID>",
 				Direction: api.PolicyDirectionEgress,
 				AppliedTo: makeEndpoints(withTenant("T1000"), withTenantSegment("T800", "John")),
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{
 						Peers: makeEndpoints(
 							withCidr("10.0.0.0/99"),
 							withTenant("T3000"),

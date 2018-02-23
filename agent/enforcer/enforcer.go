@@ -303,70 +303,81 @@ const LocalBlockSetName = "localBlocks"
 
 // makePolicySets produces a set that matches traffic selected by policy Peer/AppliedTo fields.
 func makePolicySets(policy api.Policy, endpointStore controller.Store) (*ipset.Set, *ipset.Set, error) {
-	var policySetPeer, policySetTarget, policySetDst, policySetSrc *ipset.Set
+	var policySetPeer, policySetTarget *ipset.Set
 	var err error
 
-	policySetDst, err = ipset.NewSet(
-		policytools.MakeRomanaPolicyNameSetDst(policy), ipset.SetHashNet)
+	policySetTarget, err = ipset.NewSet(
+		policytools.MakeRomanaPolicyNameIpsetTarget(policy), ipset.SetHashNet)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	policySetSrc, err = ipset.NewSet(
-		policytools.MakeRomanaPolicyNameSetSrc(policy), ipset.SetHashNet)
+	policySetPeer, err = ipset.NewSet(
+		policytools.MakeRomanaPolicyNameIpsetPeer(policy), ipset.SetHashNet)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// In Egress policy peer is our destination,
-	// in ingress policy peer is our source.
-	switch policy.Direction {
-	case api.PolicyDirectionEgress:
-		policySetPeer = policySetDst
-		policySetTarget = policySetSrc
-	case api.PolicyDirectionIngress:
-		policySetPeer = policySetSrc
-		policySetTarget = policySetDst
-	}
+	// resolves any labels, found in endpoints list, to the IP addresses
+	// of known pods and adds discovered IP addresses to the set.
+	fillPolicySet := func(endpoints []api.Endpoint, set *ipset.Set) error {
+		for _, endpoint := range endpoints {
 
-	for _, ingress := range policy.Ingress {
-		for _, peer := range ingress.Peers {
-
-			// If peer has labels provided - find endpoints with corresponding
+			// If endpoint has labels provided - find endpoints with corresponding
 			// labels in endpoint store and add these endpoint IPs to the set.
-			if len(peer.Labels) > 0 {
-				labelExpression := expression.ExpressionFromMap(peer.Labels)
+			if len(endpoint.Labels) > 0 {
+				labelExpression := expression.ExpressionFromMap(endpoint.Labels)
 
 				for _, endpoint := range endpointStore.List() {
 					if labelExpression.Eval(endpoint.Labels) {
 						member, err := ipset.NewMember(
 							fmt.Sprintf("%s/32", endpoint.IP),
-							policySetPeer,
+							set,
 						)
 						if err != nil {
-							return nil, nil, err
+							return err
 						}
 
-						err = ipset.SuppressItemExist(policySetPeer.AddMember(member))
+						err = ipset.SuppressItemExist(set.AddMember(member))
 						if err != nil {
-							return nil, nil, err
+							return err
 						}
 					}
 				}
 			}
 
-			// If peer has CIDR field, add this cidr to the policy set.
-			peerType := policytools.DetectPolicyPeerType(peer)
+			// If endpoint has CIDR field, add this cidr to the policy set.
+			peerType := policytools.DetectPolicyPeerType(endpoint)
 			if peerType != policytools.PeerCIDR {
 				continue
 			}
 
-			member, err := ipset.NewMember(peer.Cidr, policySetPeer)
+			member, err := ipset.NewMember(endpoint.Cidr, set)
+			if err != nil {
+				return err
+			}
+
+			err = ipset.SuppressItemExist(set.AddMember(member))
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if policy.IsIngress() {
+		for _, ingress := range policy.Ingress {
+			err := fillPolicySet(ingress.Peers, policySetPeer)
 			if err != nil {
 				return nil, nil, err
 			}
+		}
+	}
 
-			err = ipset.SuppressItemExist(policySetPeer.AddMember(member))
+	if policy.IsEgress() {
+		for _, egress := range policy.Egress {
+			err := fillPolicySet(egress.Peers, policySetTarget)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -469,7 +480,7 @@ func makePolicies(policies []api.Policy, valid validateFunc, iptables *iptsave.I
 	NumPolicyRules.Set(float64(0))
 
 	for iterator.Next() {
-		policy, target, peer, rule := iterator.Items()
+		policy, target, peer, rule, direction := iterator.Items()
 
 		// skip rules which don't have a valid target.
 		// TODO filter blocks by current host to avoid unnecessary rules.
@@ -485,12 +496,12 @@ func makePolicies(policies []api.Policy, valid validateFunc, iptables *iptsave.I
 			peer,
 			target,
 			rule,
-			policy.Direction,
+			direction,
 			iptables,
 		)
 
 		if err != nil {
-			log.Errorf("Error appying %s policy to target %v and peer %v with rule %v, err=%s", policy.Direction, target, peer, rule, err)
+			log.Errorf("Error appying %s policy to target %v and peer %v with rule %v, err=%s", direction, target, peer, rule, err)
 			continue
 		}
 
@@ -531,6 +542,12 @@ func cleanupUnusedChains(iptables *iptsave.IPtables, exec utilexec.Executable) {
 	}
 }
 
+func EnsureTopRule(chain *iptsave.IPChain, rule *iptsave.IPRule) {
+	if !chain.RuleInChain {
+		InsertRule(0, rule)
+	}
+}
+
 func EnsureRules(baseChain *iptsave.IPchain, rules []*iptsave.IPrule) {
 	for _, rule := range rules {
 		if !baseChain.RuleInChain(rule) {
@@ -551,10 +568,6 @@ func translateRule(policy api.Policy,
 	rule api.Rule,
 	direction string,
 	iptables *iptsave.IPtables) error {
-
-	// hack to support workaround in blueprint.MakeLabelMatchSrc and
-	// blueprint.MakeLabelMatchDst. Remove when not necessary.
-	policytools.CurrentLabelPolicyGlobalVariableHack = policy
 
 	// detect target and peer type to choose proper translation scheme.
 	peerType := policytools.DetectPolicyPeerType(peer)
@@ -581,13 +594,13 @@ func translateRule(policy api.Policy,
 	// first rule filters traffic for target tenant.
 	baseChain := EnsureChainExists(filter, translationConfig.BaseChain)
 	jumpFromBaseToPolicyRule := policytools.MakeRuleWithBody(
-		translationConfig.TopRuleMatch(target), translationConfig.TopRuleAction(policy),
+		translationConfig.TopRuleMatch(target, policy, direction), translationConfig.TopRuleAction(policy),
 	)
 	EnsureRules(baseChain, rules2list(jumpFromBaseToPolicyRule))
 
 	// second rule filters traffic for target tenant (optional for SchemePolicyOnTop)
 	secondBaseChainName := translationConfig.SecondBaseChain(policy)
-	secondRuleMatch := translationConfig.SecondRuleMatch(target)
+	secondRuleMatch := translationConfig.SecondRuleMatch(target, policy, direction)
 	secondRuleAction := translationConfig.SecondRuleAction(policy)
 	if secondBaseChainName != "" && secondRuleMatch != "" && secondRuleAction != "" {
 		secondBaseChain := EnsureChainExists(filter, secondBaseChainName)
@@ -602,7 +615,8 @@ func translateRule(policy api.Policy,
 	// third rule filters traffic by peer
 	thirdBaseChainName := translationConfig.ThirdBaseChain(policy)
 	thirdBaseChain := EnsureChainExists(filter, thirdBaseChainName)
-	thirdRuleMatch := translationConfig.ThirdRuleMatch(peer)
+	EnsureTopRule(thirdBaseChainName, MakeIsolateRuleForChain())
+	thirdRuleMatch := translationConfig.ThirdRuleMatch(peer, policy, direction)
 	thirdRuleAction := translationConfig.ThirdRuleAction(policy)
 	thirdRule := policytools.MakeRuleWithBody(
 		thirdRuleMatch, thirdRuleAction,

@@ -60,8 +60,6 @@ func EnsureChainExists(table *iptsave.IPtable, chainName string) *iptsave.IPchai
 
 // MakePolicyChainFooterRule returns iptsave rule that sits at the bottom of
 // a chain which hosts jumps to the romana policies.
-// The rule is redaundant in many cases since default chain policy is also RETURN,
-// but it highlights a flow.
 func MakePolicyChainFooterRule() *iptsave.IPrule {
 	rule := iptsave.IPrule{
 		Match: []*iptsave.Match{
@@ -71,11 +69,51 @@ func MakePolicyChainFooterRule() *iptsave.IPrule {
 		},
 		Action: iptsave.IPtablesAction{
 			Type: iptsave.ActionDefault,
-			Body: "RETURN",
+			Body: "ACCEPT",
 		},
 	}
 	return &rule
 }
+
+const (
+	ROMANA_ISOLATED_MARK = "0x1000/0x1000"
+)
+
+func MakeDropRuleForIsolatedTraffic() *iptsave.IPrule {
+	rule := iptsave.IPrule{
+		Match: []*iptsave.Match{
+			&iptsave.Match{
+				Body: "-m comment --comment ROMANA_DROP_ISOLATED",
+			},
+			&iptsave.Match{
+				Body: "-m mark --mark " + ROMANA_ISOLATED_MARK,
+			},
+		},
+		Action: iptsave.IPtablesAction{
+			Type: iptsave.ActionDefault,
+			Body: "DROP",
+		},
+	}
+	return &rule
+}
+
+func MakeIsolateRuleForChain() *iptsave.IPrule {
+	rule := iptsave.IPrule{
+		Match: []*iptsave.Match{
+			&iptsave.Match{
+				Body: "-m comment --comment ROMANA_MARK_ISOLATED",
+			},
+		},
+		Action: iptsave.IPtablesAction{
+			Type: iptsave.ActionDefault,
+			Body: "MARK --set-xmark " + ROMANA_ISOLATED_MARK,
+		},
+	}
+	return &rule
+}
+
+// MakeConntrackEstablishedRule returns a rule that usually sits on top of a
+// certan chain and accepts TCP packets known to iptables conntrack module.
 
 // MakeConntrackEstablishedRule returns a rule that usually sits on top of a
 // certan chain and accepts TCP packets known to iptables conntrack module.

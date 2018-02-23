@@ -40,7 +40,7 @@ func HashRomanaPolicy(policy api.Policy) string {
 
 	var data string
 
-	data = fmt.Sprintf("%s.%s.%s", policy.Direction, policy.Description, policy.ID)
+	data = fmt.Sprintf("%s.%s.%s", policy.DirectionString(), policy.Description, policy.ID)
 
 	for _, e := range sorted.AppliedTo {
 		data = fmt.Sprintf("%s.%s", data, EndpointToString(e))

@@ -24,13 +24,14 @@ import (
 // PolicyIterator provides a way to iterate over every combination of a
 // target * peer * rule in a list of policies.
 type PolicyIterator struct {
-	policies   []api.Policy
-	policyIdx  int
-	targetIdx  int
-	ingressIdx int
-	peerIdx    int
-	ruleIdx    int
-	started    bool
+	policies  []api.Policy
+	policyIdx int
+	targetIdx int
+	bodyIdx   int
+	peerIdx   int
+	ruleIdx   int
+	started   bool
+	direction string
 }
 
 // New creates a new PolicyIterator.
@@ -39,8 +40,21 @@ func NewPolicyIterator(policies []api.Policy) (*PolicyIterator, error) {
 		return nil, fmt.Errorf("must have non empty policies list")
 	}
 
-	emptyIngress := func(p api.Policy) bool {
-		return len(p.Ingress) == 0
+	emptyBody := func(p api.Policy) bool {
+		if p.IsIngress() && p.IsEgress() {
+			return len(p.Ingress) == 0 && len(p.Egress) == 0
+		}
+
+		if p.IsIngress() {
+			return len(p.Ingress) == 0
+		}
+
+		if p.IsEgress() {
+			return len(p.Egress) == 0
+		}
+
+		// should never get here
+		return false
 	}
 
 	emptyRules := func(p api.Policy) bool {
@@ -66,12 +80,17 @@ func NewPolicyIterator(policies []api.Policy) (*PolicyIterator, error) {
 	}
 
 	for _, p := range policies {
-		if emptyIngress(p) || emptyTargets(p) || emptyPeers(p) || emptyRules(p) {
+		if emptyBody(p) || emptyTargets(p) || emptyPeers(p) || emptyRules(p) {
 			return nil, fmt.Errorf("policy %s has .Ingress .AppliedTo .Peers or .Rules field empty", p)
 		}
 	}
 
-	return &PolicyIterator{policies: policies}, nil
+	defaultDirection := api.PolicyDirectionEgress
+	if policies[0].IsIngress() {
+		defaultDirection = api.PolicyDirectionIngress
+	}
+
+	return &PolicyIterator{policies: policies, direction: defaultDirection}, nil
 }
 
 // Next advances policy iterator to the next combination
@@ -83,7 +102,7 @@ func (i *PolicyIterator) Next() bool {
 		return true
 	}
 
-	policy, _, ingress, _, _ := i.items()
+	policy, _, ingress, _, _, _ := i.items()
 
 	if i.ruleIdx < len(ingress.Rules)-1 {
 		i.ruleIdx += 1
@@ -96,8 +115,15 @@ func (i *PolicyIterator) Next() bool {
 		return true
 	}
 
-	if i.ingressIdx < len(policy.Ingress)-1 {
-		i.ingressIdx += 1
+	var bodySize int
+	switch i.direction {
+	case api.PolicyDirectionIngress:
+		bodySize = len(policy.Ingress)
+	case api.PolicyDirectionEgress:
+		bodySize = len(policy.Egress)
+	}
+	if i.bodyIdx < bodySize-1 {
+		i.bodyIdx += 1
 		i.ruleIdx = 0
 		i.peerIdx = 0
 		return true
@@ -105,18 +131,32 @@ func (i *PolicyIterator) Next() bool {
 
 	if i.targetIdx < len(policy.AppliedTo)-1 {
 		i.targetIdx += 1
-		i.ingressIdx = 0
+		i.bodyIdx = 0
 		i.ruleIdx = 0
 		i.peerIdx = 0
+		return true
+	}
+
+	if i.direction == api.PolicyDirectionIngress && policy.IsEgress() {
+		i.direction = api.PolicyDirectionEgress
+		i.bodyIdx = 0
+		i.ruleIdx = 0
+		i.peerIdx = 0
+		i.targetIdx = 0
 		return true
 	}
 
 	if i.policyIdx < len(i.policies)-1 {
 		i.policyIdx += 1
 		i.targetIdx = 0
-		i.ingressIdx = 0
+		i.bodyIdx = 0
 		i.ruleIdx = 0
 		i.peerIdx = 0
+
+		i.direction = api.PolicyDirectionEgress
+		if i.policies[i.policyIdx].IsIngress() {
+			i.direction = api.PolicyDirectionIngress
+		}
 		return true
 	}
 
@@ -124,16 +164,23 @@ func (i *PolicyIterator) Next() bool {
 }
 
 // Items retrieves current combination of policy * target * peer * rule from iterator.
-func (i PolicyIterator) Items() (api.Policy, api.Endpoint, api.Endpoint, api.Rule) {
-	policy, target, _, peer, rule := i.items()
-	return policy, target, peer, rule
+func (i PolicyIterator) Items() (api.Policy, api.Endpoint, api.Endpoint, api.Rule, string) {
+	policy, target, _, peer, rule, direction := i.items()
+	return policy, target, peer, rule, direction
 }
 
-func (i PolicyIterator) items() (api.Policy, api.Endpoint, api.RomanaIngress, api.Endpoint, api.Rule) {
+func (i PolicyIterator) items() (api.Policy, api.Endpoint, api.PolicyBody, api.Endpoint, api.Rule, string) {
 	policy := i.policies[i.policyIdx]
 	target := policy.AppliedTo[i.targetIdx]
-	ingress := policy.Ingress[i.ingressIdx]
-	peer := policy.Ingress[i.ingressIdx].Peers[i.peerIdx]
-	rule := policy.Ingress[i.ingressIdx].Rules[i.ruleIdx]
-	return policy, target, ingress, peer, rule
+
+	var body api.PolicyBody
+	switch i.direction {
+	case api.PolicyDirectionIngress:
+		body = policy.Ingress[i.bodyIdx]
+	case api.PolicyDirectionEgress:
+		body = policy.Egress[i.bodyIdx]
+	}
+	peer := body.Peers[i.peerIdx]
+	rule := body.Rules[i.ruleIdx]
+	return policy, target, body, peer, rule, i.direction
 }

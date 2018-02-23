@@ -45,11 +45,15 @@ func TestNewPolicyIterator(t *testing.T) {
 	// and matches them against expected value.
 	countIterations := func(i int) expectFunc {
 		return func(p *PolicyIterator, e error) error {
+			if e != nil {
+				return e
+			}
+
 			var j int
 			for p.Next() {
 				j++
-				// policy, target, peer, rule := p.Items()
-				// t.Logf("Iterating over %v %v %v %v", policy, target, peer, rule)
+				policy, target, peer, rule, direction := p.Items()
+				t.Logf("Iterating over %v %v %v %v %v", policy.ID, target, peer, rule, direction)
 			}
 			if i != j {
 				return fmt.Errorf("Unexpected number of iterations, expect %d got %d", i, j)
@@ -83,17 +87,17 @@ func TestNewPolicyIterator(t *testing.T) {
 		Ports:    []uint{80, 8080},
 	}
 
-	ingress1 := api.RomanaIngress{
+	ingress1 := api.PolicyBody{
 		Peers: []api.Endpoint{endpoint1},
 		Rules: []api.Rule{rule1},
 	}
 
-	ingress2 := api.RomanaIngress{
+	ingress2 := api.PolicyBody{
 		Peers: []api.Endpoint{endpoint2},
 		Rules: []api.Rule{rule2},
 	}
 
-	ingress3 := api.RomanaIngress{
+	ingress3 := api.PolicyBody{
 		Peers: []api.Endpoint{endpoint3, endpoint4},
 		Rules: []api.Rule{rule1, rule2},
 	}
@@ -107,7 +111,8 @@ func TestNewPolicyIterator(t *testing.T) {
 			name: "test empty policy",
 			policies: []api.Policy{
 				api.Policy{
-					ID: "empty policy",
+					Direction: api.PolicyDirectionIngress,
+					ID:        "empty policy",
 				},
 			},
 			expect: mustErr,
@@ -117,8 +122,9 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "empty policy target",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{},
-					Ingress: []api.RomanaIngress{
+					Ingress: []api.PolicyBody{
 						ingress1,
 					},
 				},
@@ -130,8 +136,9 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "empty policy ingress",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint1},
-					Ingress:   []api.RomanaIngress{},
+					Ingress:   []api.PolicyBody{},
 				},
 			},
 			expect: mustErr,
@@ -141,9 +148,10 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "empty policy peers",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint1},
-					Ingress: []api.RomanaIngress{
-						api.RomanaIngress{
+					Ingress: []api.PolicyBody{
+						api.PolicyBody{
 							Rules: []api.Rule{rule1},
 						},
 					},
@@ -156,9 +164,10 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "empty policy rules",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint1},
-					Ingress: []api.RomanaIngress{
-						api.RomanaIngress{
+					Ingress: []api.PolicyBody{
+						api.PolicyBody{
 							Peers: []api.Endpoint{endpoint1},
 						},
 					},
@@ -181,8 +190,9 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "policy1",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint2},
-					Ingress: []api.RomanaIngress{
+					Ingress: []api.PolicyBody{
 						ingress1,
 					},
 				},
@@ -194,8 +204,9 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "policy1",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint3, endpoint4},
-					Ingress: []api.RomanaIngress{
+					Ingress: []api.PolicyBody{
 						ingress1,
 						ingress2,
 					},
@@ -208,16 +219,72 @@ func TestNewPolicyIterator(t *testing.T) {
 			policies: []api.Policy{
 				api.Policy{
 					ID:        "policy1",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint3, endpoint4},
-					Ingress: []api.RomanaIngress{
+					Ingress: []api.PolicyBody{
 						ingress1,
 						ingress2,
 					},
 				},
 				api.Policy{
 					ID:        "policy2",
+					Direction: api.PolicyDirectionIngress,
 					AppliedTo: []api.Endpoint{endpoint1, endpoint2},
-					Ingress: []api.RomanaIngress{
+					Ingress: []api.PolicyBody{
+						ingress3,
+					},
+				},
+			},
+			expect: countIterations(12),
+		},
+		{
+			name: "test policy egress with 1 iterations",
+			policies: []api.Policy{
+				api.Policy{
+					ID:        "policy1",
+					Direction: api.PolicyDirectionEgress,
+					AppliedTo: []api.Endpoint{endpoint2},
+					Egress: []api.PolicyBody{
+						ingress1,
+					},
+				},
+			},
+			expect: countIterations(1),
+		},
+		{
+			name: "test policy egress with 4 iterations",
+			policies: []api.Policy{
+				api.Policy{
+					ID:        "policy1",
+					Direction: api.PolicyDirectionEgress,
+					AppliedTo: []api.Endpoint{endpoint3, endpoint4},
+					Egress: []api.PolicyBody{
+						ingress1,
+						ingress2,
+					},
+				},
+			},
+			expect: countIterations(4),
+		},
+		{
+			name: "test policy ingress/egress with 12 iterations",
+			policies: []api.Policy{
+				api.Policy{
+					ID:        "policy1",
+					Direction: api.PolicyDirectionBoth,
+					AppliedTo: []api.Endpoint{endpoint3, endpoint4},
+					Ingress: []api.PolicyBody{
+						ingress1,
+					},
+					Egress: []api.PolicyBody{
+						ingress2,
+					},
+				},
+				api.Policy{
+					ID:        "policy2",
+					Direction: api.PolicyDirectionIngress,
+					AppliedTo: []api.Endpoint{endpoint1, endpoint2},
+					Ingress: []api.PolicyBody{
 						ingress3,
 					},
 				},

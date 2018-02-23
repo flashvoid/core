@@ -29,18 +29,24 @@ import (
 
 type RuleBlueprint struct {
 	BaseChain        string
-	TopRuleMatch     func(api.Endpoint) string
+	TopRuleMatch     CorrespondentMatch
 	TopRuleAction    func(api.Policy) string
 	SecondBaseChain  func(api.Policy) string
-	SecondRuleMatch  func(api.Endpoint) string
+	SecondRuleMatch  CorrespondentMatch
 	SecondRuleAction func(api.Policy) string
 	ThirdBaseChain   func(api.Policy) string
-	ThirdRuleMatch   func(api.Endpoint) string
+	ThirdRuleMatch   CorrespondentMatch
 	ThirdRuleAction  func(api.Policy) string
 	FourthBaseChain  func(api.Policy) string
 	FourthRuleMatch  func(api.Rule, string) []*iptsave.IPrule
 	FourthRuleAction string
 }
+
+// CorrespondentMatch matches traffic based on sender or receiver attribute.
+// it takes api.Endpoint object that describes current correspondent together
+// with policy name and direction of a traffic flow.
+// The function returns a `match` portion of iptables rule.
+type CorrespondentMatch func(api.Endpoint, api.Policy, string) string
 
 func MakeBlueprintKey(direction, iptablesSchemeType string, peerType PolicyPeerType, targetType PolicyTargetType) string {
 
@@ -178,27 +184,40 @@ func MakeRomanaPolicyNameRules(policy api.Policy) string {
 	return fmt.Sprintf("%s_R", MakeRomanaPolicyName(policy))
 }
 
-func MakeRomanaPolicyNameSetSrc(policy api.Policy) string {
-	return fmt.Sprintf("%s_s", MakeRomanaPolicyName(policy))
+func MakeRomanaPolicyNameIpsetPeer(policy api.Policy) string {
+	return fmt.Sprintf("%s_peer", MakeRomanaPolicyName(policy))
 }
 
-func MakeRomanaPolicyNameSetDst(policy api.Policy) string {
-	return fmt.Sprintf("%s_d", MakeRomanaPolicyName(policy))
+func MakeRomanaPolicyNameIpsetTarget(policy api.Policy) string {
+	return fmt.Sprintf("%s_target", MakeRomanaPolicyName(policy))
 }
 
-// TODO for Stas. Global variable hack to get around
-// incompatible type for MakeLabelMatchSrc and MakeLabelMatchDst.
-// This functions require policy but contract only giving them an
-// endpoint.
-// To fix Blueprint.TopRuleMatch type need to be changed together
-// with all implementations.
-var CurrentLabelPolicyGlobalVariableHack api.Policy
+func MakeLabelMatchSrc(e api.Endpoint, policy api.Policy, direction string) string {
+	var ipsetName string
 
-func MakeLabelMatchSrc(api.Endpoint) string {
-	return fmt.Sprintf("-m set --match-set %s src", MakeRomanaPolicyNameSetSrc(CurrentLabelPolicyGlobalVariableHack))
+	switch direction {
+	case api.PolicyDirectionIngress:
+		ipsetName = MakeRomanaPolicyNameIpsetPeer(policy)
+	case api.PolicyDirectionEgress:
+		ipsetName = MakeRomanaPolicyNameIpsetTarget(policy)
+	}
+
+	return makeLabelMatch("src", ipsetName)
 }
-func MakeLabelMatchDst(api.Endpoint) string {
-	return fmt.Sprintf("-m set --match-set %s dst", MakeRomanaPolicyNameSetDst(CurrentLabelPolicyGlobalVariableHack))
+func MakeLabelMatchDst(e api.Endpoint, policy api.Policy, direction string) string {
+	var ipsetName string
+
+	switch direction {
+	case api.PolicyDirectionIngress:
+		ipsetName = MakeRomanaPolicyNameIpsetTarget(policy)
+	case api.PolicyDirectionEgress:
+		ipsetName = MakeRomanaPolicyNameIpsetPeer(policy)
+	}
+
+	return makeLabelMatch("dst", ipsetName)
+}
+func makeLabelMatch(iptablesDirection string, ipsetName string) string {
+	return fmt.Sprintf("-m set --match-set %s %s", ipsetName, iptablesDirection)
 }
 
 // MakePolicyRule translates common.Rule into iptsave.IPrule.
@@ -261,26 +280,38 @@ func MakePolicyRuleWithAction(rule api.Rule, action string) []*iptsave.IPrule {
 	return result
 }
 
-func MakeSrcTenantMatch(e api.Endpoint) string { return makeTenantMatch(e, "src") }
-func MakeDstTenantMatch(e api.Endpoint) string { return makeTenantMatch(e, "dst") }
+func MakeSrcTenantMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeTenantMatch(e, "src")
+}
+func MakeDstTenantMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeTenantMatch(e, "dst")
+}
 func makeTenantMatch(e api.Endpoint, direction string) string {
 	return fmt.Sprintf("-m set --match-set %s %s", MakeTenantSetName(e.TenantID, ""), direction)
 }
 
-func MakeSrcTenantSegmentMatch(e api.Endpoint) string { return makeTenantSegmentMatch(e, "src") }
-func MakeDstTenantSegmentMatch(e api.Endpoint) string { return makeTenantSegmentMatch(e, "dst") }
+func MakeSrcTenantSegmentMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeTenantSegmentMatch(e, "src")
+}
+func MakeDstTenantSegmentMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeTenantSegmentMatch(e, "dst")
+}
 func makeTenantSegmentMatch(e api.Endpoint, direction string) string {
 	return fmt.Sprintf("-m set --match-set %s %s", MakeTenantSetName(e.TenantID, e.SegmentID), direction)
 }
 
-func MakeSrcCIDRMatch(e api.Endpoint) string { return makeCIDRMatch(e, "s") }
-func MakeDstCIDRMatch(e api.Endpoint) string { return makeCIDRMatch(e, "d") }
+func MakeSrcCIDRMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeCIDRMatch(e, "s")
+}
+func MakeDstCIDRMatch(e api.Endpoint, policy api.Policy, direction string) string {
+	return makeCIDRMatch(e, "d")
+}
 func makeCIDRMatch(e api.Endpoint, direction string) string {
 	return fmt.Sprintf("-%s %s", direction, e.Cidr)
 }
 
-func MatchEndpoint(s string) func(api.Endpoint) string {
-	return func(api.Endpoint) string { return s }
+func MatchEndpoint(s string) CorrespondentMatch {
+	return func(api.Endpoint, api.Policy, string) string { return s }
 }
 func MatchPolicyString(s string) func(api.Policy) string {
 	return func(api.Policy) string { return s }

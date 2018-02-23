@@ -208,7 +208,7 @@ func policyAdd(cmd *cli.Command, args []string) error {
 		fmt.Fprintf(w, "Id\tDirection\tSuccessful Applied?\n")
 		for i, p := range reqPolicies.SecurityPolicies {
 			fmt.Fprintf(w, "%s \t %s \t %t \n", p.ID,
-				p.Direction, reqPolicies.AppliedSuccessfully[i])
+				p.DirectionString(), reqPolicies.AppliedSuccessfully[i])
 		}
 		w.Flush()
 	}
@@ -346,7 +346,7 @@ func policyListShow(listOnly bool, args []string) error {
 
 				fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%d\t%s\n",
 					p.ID,
-					p.Direction,
+					p.DirectionString(),
 					len(p.AppliedTo),
 					noOfPeers,
 					noOfRules,
@@ -354,7 +354,7 @@ func policyListShow(listOnly bool, args []string) error {
 				)
 			} else {
 				fmt.Fprintf(w, "Policy Id:\t%s\n", p.ID)
-				fmt.Fprintf(w, "Direction:\t%s\n", p.Direction)
+				fmt.Fprintf(w, "Direction:\t%s\n", p.DirectionString())
 				fmt.Fprintf(w, "Description:\t%s\n", p.Description)
 
 				if len(p.AppliedTo) > 0 {

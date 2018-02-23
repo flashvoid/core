@@ -225,8 +225,8 @@ func TestMakeNextIngressPeer(t *testing.T) {
 			},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyWithoutSegment",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {
@@ -244,8 +244,8 @@ func TestMakeNextIngressPeer(t *testing.T) {
 			},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyWithoutSegment",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {
@@ -270,8 +270,8 @@ func TestMakeNextIngressPeer(t *testing.T) {
 			},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyWithSegments",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {
@@ -281,8 +281,8 @@ func TestMakeNextIngressPeer(t *testing.T) {
 			From: []v1beta1.NetworkPolicyPeer{},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyEmtyIngress",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {
@@ -348,8 +348,8 @@ func TestMakeNextRule(t *testing.T) {
 			},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyWithPorts",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {
@@ -359,8 +359,8 @@ func TestMakeNextRule(t *testing.T) {
 			ToPorts: []v1beta1.NetworkPolicyPort{},
 			RomanaPolicy: api.Policy{
 				ID: "TestPolicyWithPorts",
-				Ingress: []api.RomanaIngress{
-					api.RomanaIngress{},
+				Ingress: []api.PolicyBody{
+					api.PolicyBody{},
 				},
 			},
 			expected: func(p *api.Policy) bool {

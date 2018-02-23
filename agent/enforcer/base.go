@@ -16,8 +16,6 @@
 package enforcer
 
 import (
-	"fmt"
-
 	"github.com/romana/core/agent/iptsave"
 )
 
@@ -68,18 +66,10 @@ func MakeBaseRules() []*iptsave.IPchain {
 				&iptsave.IPrule{
 					Match: []*iptsave.Match{
 						&iptsave.Match{
-							Body: fmt.Sprintf("-m set --match-set %s dst", LocalBlockSetName),
-						},
-					},
-					Action: iptsave.IPtablesAction{
-						Type: iptsave.ActionDefault,
-						Body: "ROMANA-FORWARD-IN",
-					},
-				},
-				&iptsave.IPrule{
-					Match: []*iptsave.Match{
-						&iptsave.Match{
 							Body: "-m comment --comment Egress",
+						},
+						&iptsave.Match{
+							Body: "-m state --state RELATED,ESTABLISHED",
 						},
 					},
 					Action: iptsave.IPtablesAction{
@@ -87,6 +77,8 @@ func MakeBaseRules() []*iptsave.IPchain {
 						Body: "ACCEPT",
 					},
 				},
+				MakeDropRuleForIsolatedTraffic(),
+				MakePolicyChainFooterRule(),
 			},
 		},
 		&iptsave.IPchain{
@@ -113,17 +105,8 @@ func MakeBaseRules() []*iptsave.IPchain {
 						Body: MakeOperatorPolicyChainName(),
 					},
 				},
-				&iptsave.IPrule{
-					Match: []*iptsave.Match{
-						&iptsave.Match{
-							Body: "-m comment --comment DefaultDrop",
-						},
-					},
-					Action: iptsave.IPtablesAction{
-						Type: iptsave.ActionDefault,
-						Body: "DROP",
-					},
-				},
+				MakeDropRuleForIsolatedTraffic(),
+				MakePolicyChainFooterRule(),
 			},
 		},
 		&iptsave.IPchain{

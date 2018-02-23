@@ -224,6 +224,7 @@ func deleteDefaultPolicy(o *v1.Namespace, l *KubeListener) {
 
 // addDefaultPolicy adds the default policy which is to allow
 // all ingres.
+// TODO isolation, this func should not be used any more.
 func addDefaultPolicy(o *v1.Namespace, l *KubeListener) {
 	var err error
 	// Find tenant, to properly set up policy
@@ -234,8 +235,8 @@ func addDefaultPolicy(o *v1.Namespace, l *KubeListener) {
 		ID:        policyID,
 		Direction: romanaApi.PolicyDirectionIngress,
 		AppliedTo: []romanaApi.Endpoint{{TenantID: tenantID}},
-		Ingress: []romanaApi.RomanaIngress{
-			romanaApi.RomanaIngress{
+		Ingress: []romanaApi.PolicyBody{
+			romanaApi.PolicyBody{
 				Peers: []romanaApi.Endpoint{{Peer: romanaApi.Wildcard}},
 				Rules: []romanaApi.Rule{{Protocol: romanaApi.Wildcard}},
 			},

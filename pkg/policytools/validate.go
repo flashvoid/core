@@ -119,16 +119,16 @@ func ValidatePolicy(policy api.Policy) error {
 	}
 
 	for iterator.Next() {
-		p, target, peer, rule := iterator.Items()
+		p, target, peer, rule, _ := iterator.Items()
 
 		peerType := DetectPolicyPeerType(peer)
 		targetType := DetectPolicyTargetType(target)
 
-		blueprintKey := MakeBlueprintKey(p.Direction, DefaultIptablesSchema, peerType, targetType)
+		blueprintKey := MakeBlueprintKey(p.DirectionString(), DefaultIptablesSchema, peerType, targetType)
 		_, ok := Blueprints[blueprintKey]
 		if !ok {
 			return fmt.Errorf("invalid combination of target=%s, peer=%s, direction=%s",
-				peer, target, p.Direction)
+				peer, target, p.DirectionString())
 		}
 
 		errMsg := validateRule(rule)

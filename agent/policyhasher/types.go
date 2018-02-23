@@ -34,7 +34,7 @@ import (
 // PolicyToCanonical sorts romana policy Ingress and AppliedTo fields.
 func PolicyToCanonical(unsorted api.Policy) api.Policy {
 	sorted := api.Policy{
-		Direction:   unsorted.Direction,
+		Direction:   unsorted.DirectionString(),
 		Description: unsorted.Description,
 		ID:          unsorted.ID,
 	}
@@ -102,8 +102,8 @@ func EndpointToString(e api.Endpoint) string {
 }
 
 // IngressToCanonical returns canonical version of common.RomanaIngress.
-func IngressToCanonical(unsorted api.RomanaIngress) api.RomanaIngress {
-	sorted := api.RomanaIngress{}
+func IngressToCanonical(unsorted api.PolicyBody) api.PolicyBody {
+	sorted := api.PolicyBody{}
 
 	sorted.Peers = NewEndpointList(unsorted.Peers).Sort().List()
 

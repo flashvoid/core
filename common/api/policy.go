@@ -16,6 +16,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/romana/core/common"
@@ -49,6 +50,7 @@ func (e Endpoint) String() string {
 const (
 	PolicyDirectionIngress = "ingress"
 	PolicyDirectionEgress  = "egress"
+	PolicyDirectionBoth    = "Ingress,Egress"
 )
 
 type PortRange [2]uint
@@ -95,16 +97,55 @@ type Policy struct {
 	ID string `json:"id"`
 	// Direction is one of common.PolicyDirectionIngress or common.PolicyDirectionIngress,
 	// otherwise common.Validate will return an error.
-	Direction string `json:"direction,omitempty" romana:"desc:Direction is one of 'ingress' or egress'."`
+	Direction string `json:"direction,omitempty" romana:"desc:Direction is one or both of 'ingress' or egress'."`
 	// Description is human-redable description of the policy.
 	Description string `json:"description,omitempty"`
 	// Datacenter describes a Romana deployment.
-	AppliedTo []Endpoint      `json:"applied_to,omitempty"`
-	Ingress   []RomanaIngress `json:"ingress,omitempty"`
+	AppliedTo []Endpoint   `json:"applied_to,omitempty"`
+	Ingress   []PolicyBody `json:"ingress,omitempty"`
+	Egress    []PolicyBody `json:"egress,omitempty"`
 	//	Tags       []Tag      `json:"tags,omitempty"`
 }
 
-type RomanaIngress struct {
+func (p *Policy) SetDirection(s string) error {
+	switch s {
+	case PolicyDirectionIngress, PolicyDirectionEgress, PolicyDirectionBoth:
+		p.Direction = s
+	default:
+		return errors.New(fmt.Sprintf("Unknown policy direction %s", s))
+	}
+	return nil
+}
+
+func (p *Policy) IsIngress() bool {
+	if p == nil {
+		return false
+	}
+
+	if p.Direction == PolicyDirectionBoth || p.Direction == PolicyDirectionIngress {
+		return true
+	}
+
+	return false
+}
+
+func (p *Policy) IsEgress() bool {
+	if p == nil {
+		return false
+	}
+
+	if p.Direction == PolicyDirectionBoth || p.Direction == PolicyDirectionEgress {
+		return true
+	}
+
+	return false
+}
+
+func (p Policy) DirectionString() string {
+	return p.Direction
+}
+
+type PolicyBody struct {
 	Peers []Endpoint `json:"peers,omitempty"`
 	Rules []Rule     `json:"rules,omitempty"`
 }

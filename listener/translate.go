@@ -87,6 +87,25 @@ func (t Translator) Kube2RomanaBulk(kubePolicies []v1beta1.NetworkPolicy) ([]api
 
 }
 
+func translateKubernetesPolicyDirection(kubePolicy *v1beta1.NetworkPolicy) string {
+	fmt.Printf("DEBUG: %+v\n", kubePolicy)
+	if len(kubePolicy.Spec.PolicyTypes) > 1 {
+		return api.PolicyDirectionBoth
+	}
+
+	// TODO isolation, client-go still not parsing
+	// policyTypes correctly, have to use heuristic
+	if len(kubePolicy.Spec.PolicyTypes) == 0 {
+		return api.PolicyDirectionIngress
+	}
+
+	if kubePolicy.Spec.PolicyTypes[0] == "Egress" {
+		return api.PolicyDirectionEgress
+	}
+
+	return api.PolicyDirectionIngress
+}
+
 // translateNetworkPolicy translates a Kubernetes policy into
 // Romana policy (see api.Policy) with the following rules:
 // 1. Kubernetes Namespace corresponds to Romana Tenant
@@ -94,10 +113,16 @@ func (t Translator) Kube2RomanaBulk(kubePolicies []v1beta1.NetworkPolicy) ([]api
 //    automatically have been created when the namespace was added)
 func (l *Translator) translateNetworkPolicy(kubePolicy *v1beta1.NetworkPolicy) (api.Policy, error) {
 	policyID := getPolicyID(*kubePolicy)
-	romanaPolicy := &api.Policy{Direction: api.PolicyDirectionIngress, ID: policyID}
+	romanaPolicy := &api.Policy{Direction: translateKubernetesPolicyDirection(kubePolicy),
+		ID: policyID}
+
+	direction := api.PolicyDirectionEgress
+	if romanaPolicy.IsIngress() {
+		direction = api.PolicyDirectionIngress
+	}
 
 	// Prepare translate group with original kubernetes policy and empty romana policy.
-	translateGroup := &TranslateGroup{kubePolicy, romanaPolicy, TranslateGroupStartIndex}
+	translateGroup := &TranslateGroup{kubePolicy, romanaPolicy, TranslateGroupStartIndex, direction}
 
 	// Fill in AppliedTo field of romana policy.
 	err := translateGroup.translateTarget(l)
@@ -117,6 +142,12 @@ func (l *Translator) translateNetworkPolicy(kubePolicy *v1beta1.NetworkPolicy) (
 			return *translateGroup.romanaPolicy, TranslatorError{ErrorTranslatingPolicyIngress, err}
 		}
 	}
+
+	if translateGroup.direction == api.PolicyDirectionIngress && translateGroup.romanaPolicy.IsEgress() {
+		translateGroup.direction = api.PolicyDirectionEgress
+		translateGroup.ingressIndex = 0
+	}
+	// TODO isolation, call translateNextEgress
 
 	return *translateGroup.romanaPolicy, nil
 }
@@ -150,6 +181,7 @@ type TranslateGroup struct {
 	kubePolicy   *v1beta1.NetworkPolicy
 	romanaPolicy *api.Policy
 	ingressIndex int
+	direction    string
 }
 
 const TranslateGroupStartIndex = 0
@@ -194,10 +226,9 @@ func (tg *TranslateGroup) translateTarget(translator *Translator) error {
 	return nil
 }
 
-/// makeNextIngressPeer analyzes current Ingress rule and adds new Peer to romanaPolicy.Peers.
+// makeNextIngressPeer analyzes current Ingress rule and adds new Peer to romanaPolicy.Peers.
 func (tg *TranslateGroup) makeNextIngressPeer(translator *Translator) error {
 	ingress := tg.kubePolicy.Spec.Ingress[tg.ingressIndex]
-	// romanaIngress := tg.romanaPolicy.Ingress[tg.ingressIndex]
 
 	for _, fromEntry := range ingress.From {
 		var sourceEndpoint api.Endpoint
@@ -257,6 +288,68 @@ func (tg *TranslateGroup) makeNextIngressPeer(translator *Translator) error {
 	return nil
 }
 
+// makeNextEgressPeer analyzes current Egress rule and adds new Peer to romanaPolicy.Peers.
+func (tg *TranslateGroup) makeNextEgressPeer(translator *Translator) error {
+	egress := tg.kubePolicy.Spec.Egress[tg.ingressIndex]
+
+	for _, toEntry := range egress.To {
+		var targetEndpoint api.Endpoint
+
+		// This egress field matching a namespace which will be our target tenant.
+		if toEntry.NamespaceSelector != nil {
+			tenantID := GetTenantIDFromNamespaceName(toEntry.NamespaceSelector.MatchLabels[translator.tenantLabelName])
+			if tenantID == "" {
+				// Use the namespace from objectmeta
+				log.Infof("No label found for %s, using %s for tenant identifier", translator.tenantLabelName, tg.kubePolicy.ObjectMeta.Namespace)
+				tenantID = tg.kubePolicy.ObjectMeta.Namespace
+			}
+
+			// Found a target tenant, let's register it as romana Peer.
+			targetEndpoint.TenantID = tenantID
+		}
+
+		// if target tenant not specified assume same as target tenant.
+		if targetEndpoint.TenantID == "" {
+			targetEndpoint.TenantID = GetTenantIDFromNamespaceName(tg.kubePolicy.ObjectMeta.Namespace)
+		}
+
+		// podSelector can be in either of 3 configurations
+		// nil - selects all the traffic within namespaces
+		// matchLabels[segmentLabel] - selects romana segment, other labels ignored
+		// matchLabels[otherLabels] - selects endpoints by their labels within namespace
+		if toEntry.PodSelector != nil {
+
+			// Get segment name from podSelector.
+			kubeSegmentID, ok := toEntry.PodSelector.MatchLabels[translator.segmentLabelName]
+			if ok {
+				// Register source tenant/segment as a romana Peer.
+				targetEndpoint.SegmentID = kubeSegmentID
+			} else {
+
+				// copy labels from podSelector into romana source endpoint
+				copyLabels := make(map[string]string)
+				for k, v := range toEntry.PodSelector.MatchLabels {
+					copyLabels[k] = v
+				}
+				targetEndpoint.Labels = copyLabels
+			}
+
+		}
+
+		tg.romanaPolicy.Egress[tg.ingressIndex].Peers = append(tg.romanaPolicy.Egress[tg.ingressIndex].Peers, targetEndpoint)
+
+	}
+
+	// kubernetes policy with empty Egress with empty To field matches traffic
+	// to all sources.
+	if len(egress.To) == 0 {
+		tg.romanaPolicy.Egress[tg.ingressIndex].Peers = append(tg.romanaPolicy.Egress[tg.ingressIndex].Peers, api.Endpoint{Peer: api.Wildcard})
+
+	}
+
+	return nil
+}
+
 // makeNextRule analizes current ingress rule and adds a new Rule to romanaPolicy.Rules.
 func (tg *TranslateGroup) makeNextRule(translator *Translator) error {
 	ingress := tg.kubePolicy.Spec.Ingress[tg.ingressIndex]
@@ -290,6 +383,39 @@ func (tg *TranslateGroup) makeNextRule(translator *Translator) error {
 	return nil
 }
 
+// makeNextEgressRule analizes current egress rule and adds a new Rule to romanaPolicy.Rules.
+func (tg *TranslateGroup) makeNextEgressRule(translator *Translator) error {
+	egress := tg.kubePolicy.Spec.Egress[tg.ingressIndex]
+
+	for _, toPort := range egress.Ports {
+		var proto string
+		var ports []uint
+
+		if toPort.Protocol == nil {
+			proto = "tcp"
+		} else {
+			proto = strings.ToLower(string(*toPort.Protocol))
+		}
+
+		if toPort.Port == nil {
+			ports = []uint{}
+		} else {
+			ports = []uint{uint(toPort.Port.IntValue())}
+		}
+
+		rule := api.Rule{Protocol: proto, Ports: ports}
+		tg.romanaPolicy.Egress[tg.ingressIndex].Rules = append(tg.romanaPolicy.Egress[tg.ingressIndex].Rules, rule)
+	}
+
+	// treat policy with no rules as policy that targets all traffic.
+	if len(egress.Ports) == 0 {
+		rule := api.Rule{Protocol: api.Wildcard}
+		tg.romanaPolicy.Egress[tg.ingressIndex].Rules = append(tg.romanaPolicy.Egress[tg.ingressIndex].Rules, rule)
+	}
+
+	return nil
+}
+
 // translateNextIngress translates next Ingress object from kubePolicy into romanaPolicy
 // Peer and Rule fields.
 func (tg *TranslateGroup) translateNextIngress(translator *Translator) error {
@@ -298,7 +424,7 @@ func (tg *TranslateGroup) translateNextIngress(translator *Translator) error {
 		return NoMoreIngressEntities{}
 	}
 
-	tg.romanaPolicy.Ingress = append(tg.romanaPolicy.Ingress, api.RomanaIngress{})
+	tg.romanaPolicy.Ingress = append(tg.romanaPolicy.Ingress, api.PolicyBody{})
 
 	// Translate Ingress.From into romanaPolicy.ToPorts.
 	err := tg.makeNextIngressPeer(translator)
@@ -308,6 +434,33 @@ func (tg *TranslateGroup) translateNextIngress(translator *Translator) error {
 
 	// Translate Ingress.Ports into romanaPolicy.Rules.
 	err = tg.makeNextRule(translator)
+	if err != nil {
+		return err
+	}
+
+	tg.ingressIndex++
+
+	return nil
+}
+
+// translateNextEgress translates next Egress object from kubePolicy into romanaPolicy
+// Peer and Rule fields.
+func (tg *TranslateGroup) translateNextEgress(translator *Translator) error {
+
+	if tg.ingressIndex > len(tg.kubePolicy.Spec.Egress)-1 {
+		return NoMoreIngressEntities{}
+	}
+
+	tg.romanaPolicy.Egress = append(tg.romanaPolicy.Egress, api.PolicyBody{})
+
+	// Translate Egress.To into romanaPolicy.ToPorts.
+	err := tg.makeNextEgressPeer(translator)
+	if err != nil {
+		return err
+	}
+
+	// Translate Egress.Ports into romanaPolicy.Rules.
+	err = tg.makeNextEgressRule(translator)
 	if err != nil {
 		return err
 	}
