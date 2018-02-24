@@ -542,9 +542,9 @@ func cleanupUnusedChains(iptables *iptsave.IPtables, exec utilexec.Executable) {
 	}
 }
 
-func EnsureTopRule(chain *iptsave.IPChain, rule *iptsave.IPRule) {
-	if !chain.RuleInChain {
-		InsertRule(0, rule)
+func EnsureTopRule(chain *iptsave.IPchain, rule *iptsave.IPrule) {
+	if !chain.RuleInChain(rule) {
+		chain.InsertRule(0, rule)
 	}
 }
 
@@ -615,7 +615,7 @@ func translateRule(policy api.Policy,
 	// third rule filters traffic by peer
 	thirdBaseChainName := translationConfig.ThirdBaseChain(policy)
 	thirdBaseChain := EnsureChainExists(filter, thirdBaseChainName)
-	EnsureTopRule(thirdBaseChainName, MakeIsolateRuleForChain())
+	EnsureTopRule(thirdBaseChain, MakeIsolateRuleForChain())
 	thirdRuleMatch := translationConfig.ThirdRuleMatch(peer, policy, direction)
 	thirdRuleAction := translationConfig.ThirdRuleAction(policy)
 	thirdRule := policytools.MakeRuleWithBody(
