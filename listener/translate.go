@@ -88,14 +88,12 @@ func (t Translator) Kube2RomanaBulk(kubePolicies []v1beta1.NetworkPolicy) ([]api
 }
 
 func translateKubernetesPolicyDirection(kubePolicy *v1beta1.NetworkPolicy) string {
-	fmt.Printf("DEBUG: %+v\n", kubePolicy)
 	if len(kubePolicy.Spec.PolicyTypes) > 1 {
 		return api.PolicyDirectionBoth
 	}
 
-	// TODO isolation, client-go still not parsing
-	// policyTypes correctly, have to use heuristic
 	if len(kubePolicy.Spec.PolicyTypes) == 0 {
+		log.Debugf("Kubernetes policy %s without PolicyType, using Ingress as fallback", kubePolicy.Name)
 		return api.PolicyDirectionIngress
 	}
 
