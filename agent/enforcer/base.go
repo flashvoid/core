@@ -112,16 +112,12 @@ func MakeBaseRules() []*iptsave.IPchain {
 		&iptsave.IPchain{
 			Name:   MakeOperatorPolicyChainName(),
 			Policy: "-",
-			Rules: []*iptsave.IPrule{
-				MakePolicyChainFooterRule(),
-			},
+			Rules:  []*iptsave.IPrule{},
 		},
 		&iptsave.IPchain{
 			Name:   MakeOperatorPolicyIngressChainName(),
 			Policy: "-",
-			Rules: []*iptsave.IPrule{
-				MakePolicyChainFooterRule(),
-			},
+			Rules:  []*iptsave.IPrule{},
 		},
 	}
 }
