@@ -277,6 +277,14 @@ func MakePolicyRuleWithAction(rule api.Rule, action string) []*iptsave.IPrule {
 		// Need to replaces then as *uint first. Stas.
 		result = append(result, MakeRuleDefaultWithBody("", action))
 	}
+
+	if strings.ToUpper(rule.Protocol) == "NONE" {
+		// Special case used to defer making decision about traffic
+		// used for kubernetes default policies (ones with no rules defined).
+		// overrides "action" parameter.
+		action = "RETURN"
+		result = append(result, MakeRuleDefaultWithBody("", action))
+	}
 	return result
 }
 

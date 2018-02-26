@@ -4,16 +4,14 @@ metadata:
  name: pol1
  namespace: tenant-a
 spec:
- policyTypes:
- - Ingress
  podSelector:
   matchLabels:
    romana.io/segment: backend
  ingress:
  - from:
-   - namespaceSelector:
+   - podSelector:
       matchLabels:
-       namespace: kube-system
+       romana.io/segment: frontend
    ports:
     - protocol: TCP
       port: 80

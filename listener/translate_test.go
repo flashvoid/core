@@ -76,6 +76,7 @@ func TestTranslatePolicy(t *testing.T) {
 	translator := Translator{
 		cacheMu:          &sync.Mutex{},
 		segmentLabelName: "romana.io/segment",
+		tenantLabelName:  "namespace",
 	}
 
 	policyToList := func(p ...v1beta1.NetworkPolicy) []v1beta1.NetworkPolicy { return p }
@@ -100,8 +101,12 @@ func TestTranslatePolicy(t *testing.T) {
 				t.Fatalf("failed to load reference policy %s, err=%s", file, err)
 			}
 
-			if len(romanaPolicy) > 0 && romanaPolicy[0].String() == referencePolicy.String() {
-				t.Fatalf("policy\n%s\ndoesn't match reference policy\n%s", romanaPolicy, referencePolicy)
+			if len(romanaPolicy) != 1 {
+				t.Fatalf("failed to translate romana policy")
+			}
+
+			if romanaPolicy[0].String() != referencePolicy.String() {
+				t.Fatalf("policy\n%s\ndoesn't match reference policy\n%s", romanaPolicy[0], referencePolicy.String())
 			}
 
 		}

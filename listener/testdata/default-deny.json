@@ -1,0 +1,1 @@
+{"id":"kube.tenant-a.default-deny.ecebb630-1ab2-11e8-b3b2-0248633e0412","direction":"ingress","applied_to":[{"tenant_id":"tenant-a"}],"ingress":[{"peers":[{"peer":"any"}],"rules":[{"protocol":"none"}]}]}

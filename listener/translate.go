@@ -145,7 +145,17 @@ func (l *Translator) translateNetworkPolicy(kubePolicy *v1beta1.NetworkPolicy) (
 		translateGroup.direction = api.PolicyDirectionEgress
 		translateGroup.ingressIndex = 0
 	}
-	// TODO isolation, call translateNextEgress
+
+	for {
+		err := translateGroup.translateNextEgress(l)
+		if _, ok := err.(NoMoreIngressEntities); ok {
+			break
+		}
+
+		if err != nil {
+			return *translateGroup.romanaPolicy, TranslatorError{ErrorTranslatingPolicyIngress, err}
+		}
+	}
 
 	return *translateGroup.romanaPolicy, nil
 }
@@ -227,7 +237,6 @@ func (tg *TranslateGroup) translateTarget(translator *Translator) error {
 // makeNextIngressPeer analyzes current Ingress rule and adds new Peer to romanaPolicy.Peers.
 func (tg *TranslateGroup) makeNextIngressPeer(translator *Translator) error {
 	ingress := tg.kubePolicy.Spec.Ingress[tg.ingressIndex]
-
 	for _, fromEntry := range ingress.From {
 		var sourceEndpoint api.Endpoint
 
@@ -418,6 +427,17 @@ func (tg *TranslateGroup) makeNextEgressRule(translator *Translator) error {
 // Peer and Rule fields.
 func (tg *TranslateGroup) translateNextIngress(translator *Translator) error {
 
+	// Policy with empty ingress list matches all ingress traffic.
+	if len(tg.kubePolicy.Spec.Ingress) == 0 && tg.romanaPolicy.IsIngress() {
+		tg.romanaPolicy.Ingress = append(tg.romanaPolicy.Ingress, api.PolicyBody{})
+		tg.romanaPolicy.Ingress[tg.ingressIndex].Peers = append(tg.romanaPolicy.Ingress[tg.ingressIndex].Peers, api.Endpoint{Peer: api.Wildcard})
+
+		rule := api.Rule{Protocol: api.ProtocolNone}
+		tg.romanaPolicy.Ingress[tg.ingressIndex].Rules = append(tg.romanaPolicy.Ingress[tg.ingressIndex].Rules, rule)
+		return NoMoreIngressEntities{}
+	}
+
+	// Stop iteration.
 	if tg.ingressIndex > len(tg.kubePolicy.Spec.Ingress)-1 {
 		return NoMoreIngressEntities{}
 	}
@@ -444,6 +464,16 @@ func (tg *TranslateGroup) translateNextIngress(translator *Translator) error {
 // translateNextEgress translates next Egress object from kubePolicy into romanaPolicy
 // Peer and Rule fields.
 func (tg *TranslateGroup) translateNextEgress(translator *Translator) error {
+
+	// Policy with empty egress list matches all egress traffic.
+	if len(tg.kubePolicy.Spec.Egress) == 0 && tg.romanaPolicy.IsEgress() {
+		tg.romanaPolicy.Egress = append(tg.romanaPolicy.Egress, api.PolicyBody{})
+		tg.romanaPolicy.Egress[tg.ingressIndex].Peers = append(tg.romanaPolicy.Egress[tg.ingressIndex].Peers, api.Endpoint{Peer: api.Wildcard})
+
+		rule := api.Rule{Protocol: api.ProtocolNone}
+		tg.romanaPolicy.Egress[tg.ingressIndex].Rules = append(tg.romanaPolicy.Egress[tg.ingressIndex].Rules, rule)
+		return NoMoreIngressEntities{}
+	}
 
 	if tg.ingressIndex > len(tg.kubePolicy.Spec.Egress)-1 {
 		return NoMoreIngressEntities{}

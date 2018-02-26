@@ -2,8 +2,13 @@
     "apiVersion": "extensions/v1beta1",
     "kind": "NetworkPolicy",
     "metadata": {
+        "creationTimestamp": "2018-02-26T07:36:22Z",
+        "generation": 1,
         "name": "pol1",
-        "namespace": "tenant-a"
+        "namespace": "tenant-a",
+        "resourceVersion": "637144",
+        "selfLink": "/apis/extensions/v1beta1/namespaces/tenant-a/networkpolicies/pol1",
+        "uid": "be3a292d-1ac7-11e8-b3b2-0248633e0412"
     },
     "spec": {
         "ingress": [
@@ -29,6 +34,9 @@
             "matchLabels": {
                 "free-range": "tenbucks"
             }
-        }
+        },
+        "policyTypes": [
+            "Ingress"
+        ]
     }
 }

@@ -4,6 +4,8 @@ metadata:
  name: pol1
  namespace: tenant-a
 spec:
+ policyTypes:
+ - Ingress
  podSelector:
   matchLabels:
    romana.io/segment: backend

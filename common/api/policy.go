@@ -29,6 +29,11 @@ const (
 
 	// Wildcard
 	Wildcard = "any"
+
+	// Special token indicates that rule
+	// will match all the traffic but makes
+	// no decision about traffic.
+	ProtocolNone = "none"
 )
 
 // Endpoint represents an endpoint - that is, something that

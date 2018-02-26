@@ -1,0 +1,19 @@
+{
+    "apiVersion": "extensions/v1beta1",
+    "kind": "NetworkPolicy",
+    "metadata": {
+        "creationTimestamp": "2018-02-26T05:07:21Z",
+        "generation": 1,
+        "name": "default-deny",
+        "namespace": "tenant-a",
+        "resourceVersion": "626375",
+        "selfLink": "/apis/extensions/v1beta1/namespaces/tenant-a/networkpolicies/default-deny",
+        "uid": "ecebb630-1ab2-11e8-b3b2-0248633e0412"
+    },
+    "spec": {
+        "podSelector": {},
+        "policyTypes": [
+            "Ingress"
+        ]
+    }
+}

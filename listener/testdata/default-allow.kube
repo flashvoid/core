@@ -1,0 +1,23 @@
+{
+    "apiVersion": "extensions/v1beta1",
+    "kind": "NetworkPolicy",
+    "metadata": {
+        "creationTimestamp": "2018-02-26T08:00:48Z",
+        "generation": 1,
+        "name": "allow-all",
+        "namespace": "default",
+        "resourceVersion": "638911",
+        "selfLink": "/apis/extensions/v1beta1/namespaces/default/networkpolicies/allow-all",
+        "uid": "27c4ef30-1acb-11e8-b3b2-0248633e0412"
+    },
+    "spec": {
+        "ingress": [
+            {}
+        ],
+        "podSelector": {},
+        "policyTypes": [
+            "Ingress"
+        ]
+    }
+}
+

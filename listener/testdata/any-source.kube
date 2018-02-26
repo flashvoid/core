@@ -2,8 +2,13 @@
     "apiVersion": "extensions/v1beta1",
     "kind": "NetworkPolicy",
     "metadata": {
+        "creationTimestamp": "2018-02-24T04:26:19Z",
+        "generation": 1,
         "name": "pol1",
-        "namespace": "tenant-a"
+        "namespace": "tenant-a",
+        "resourceVersion": "415750",
+        "selfLink": "/apis/extensions/v1beta1/namespaces/tenant-a/networkpolicies/pol1",
+        "uid": "dc563ccf-191a-11e8-b3b2-0248633e0412"
     },
     "spec": {
         "ingress": [
@@ -20,6 +25,10 @@
             "matchLabels": {
                 "romana.io/segment": "backend"
             }
-        }
+        },
+        "policyTypes": [
+            "Ingress"
+        ]
     }
 }
+

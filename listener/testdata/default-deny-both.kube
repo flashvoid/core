@@ -1,0 +1,20 @@
+{
+    "apiVersion": "extensions/v1beta1",
+    "kind": "NetworkPolicy",
+    "metadata": {
+        "creationTimestamp": "2018-02-26T07:57:50Z",
+        "generation": 1,
+        "name": "default-deny",
+        "namespace": "default",
+        "resourceVersion": "638695",
+        "selfLink": "/apis/extensions/v1beta1/namespaces/default/networkpolicies/default-deny",
+        "uid": "bd8754f1-1aca-11e8-b3b2-0248633e0412"
+    },
+    "spec": {
+        "podSelector": {},
+        "policyTypes": [
+            "Ingress",
+            "Egress"
+        ]
+    }
+}
